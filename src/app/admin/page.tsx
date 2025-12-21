@@ -166,6 +166,23 @@ export default function AdminPage() {
                 </div>
             </nav>
 
+            {/* Trial Banner */}
+            {storeInfo?.trial_ends_at && (
+                (() => {
+                    const daysLeft = Math.ceil((new Date(storeInfo.trial_ends_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                    if (daysLeft < 0) return (
+                        <div className="bg-red-600 text-white p-3 text-center text-sm font-bold">
+                            ⚠️ Tu periodo de prueba ha expirado. <a href="https://wa.me/5491112345678" target="_blank" className="underline hover:text-red-100">Contáctanos para activar tu plan</a>.
+                        </div>
+                    );
+                    return (
+                        <div className="bg-blue-600 text-white p-2 text-center text-xs font-semibold">
+                            🎁 Estás disfrutando de tus {daysLeft} días de prueba gratis.
+                        </div>
+                    );
+                })()
+            )}
+
             {/* Content */}
             <main className="max-w-7xl mx-auto p-6">
                 {loading && activeTab !== 'orders' ? ( // Don't show global loading for orders as we have realtime

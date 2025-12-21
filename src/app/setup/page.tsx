@@ -36,10 +36,14 @@ export default function SetupPage() {
 
             const finalSlug = slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-');
 
+            const trialEndsAt = new Date();
+            trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+
             const { error } = await supabase.from('stores').insert({
                 owner_id: user.id,
                 name: name.trim(),
                 slug: finalSlug,
+                trial_ends_at: trialEndsAt.toISOString(),
                 settings: {
                     primary_color: '#f97316',
                     store_name: name.trim()

@@ -41,6 +41,7 @@ export async function getStoreSettings() {
         id: data.id,
         store_name: data.name,
         slug: data.slug,
+        trial_ends_at: data.trial_ends_at,
         ...data.settings
     };
 }
