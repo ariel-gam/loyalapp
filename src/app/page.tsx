@@ -6,7 +6,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-600 to-red-700 flex flex-col text-white">
       <header className="p-6 flex justify-between items-center max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold tracking-tight">LoyalFood</span>
+          <span className="text-2xl font-bold tracking-tight">LoyalApp</span>
           <span className="bg-white/20 text-xs px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">SaaS</span>
         </div>
         <nav className="flex gap-6 items-center">
@@ -29,7 +29,7 @@ export default function LandingPage() {
 
         <div className="flex gap-4 flex-col sm:flex-row items-center w-full justify-center">
           <Link href="/login" className="bg-white text-orange-600 text-lg px-8 py-4 rounded-full font-bold shadow-xl hover:shadow-2xl hover:bg-gray-50 transform hover:-translate-y-1 transition-all w-full sm:w-auto">
-            Crear mi Tienda Ahora
+            Crear mi Carta Digital
           </Link>
           <Link href="/demo-pizza" className="border-2 border-white/30 text-white text-lg px-8 py-4 rounded-full font-bold hover:bg-white/10 transition-all w-full sm:w-auto">
             Ver Demo (Pizzería)
