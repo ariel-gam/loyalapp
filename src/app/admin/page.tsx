@@ -395,6 +395,35 @@ export default function AdminPage() {
                                     <div><label className="text-sm font-bold">Color</label><input name="primary_color" type="color" defaultValue={storeInfo.primary_color || '#f97316'} className="h-10 w-full" /></div>
                                     <button className="w-full bg-orange-600 text-white font-bold py-2 rounded">Guardar</button>
                                 </form>
+
+                                <hr className="my-8 border-gray-200" />
+
+                                <div className="bg-orange-50 p-6 rounded-xl border border-orange-100">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-2">Plan de Suscripción</h3>
+                                    <p className="text-gray-600 mb-4 text-sm">
+                                        Tu plan actual expira el: <strong>{storeInfo.trial_ends_at ? new Date(storeInfo.trial_ends_at).toLocaleDateString() : 'N/A'}</strong>
+                                    </p>
+                                    <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
+                                        <div>
+                                            <p className="font-bold text-gray-900">Plan Mensual</p>
+                                            <p className="text-sm text-gray-500">$60.000 / mes</p>
+                                        </div>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const { createSubscriptionPreference } = await import('@/actions/paymentActions');
+                                                    const url = await createSubscriptionPreference();
+                                                    window.location.href = url;
+                                                } catch (e: any) {
+                                                    alert("Error iniciando pago: " + e.message);
+                                                }
+                                            }}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition"
+                                        >
+                                            Pagar Suscripción
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </>
