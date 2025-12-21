@@ -1,9 +1,9 @@
 
-# Mercado Pago Webhook Payment Notification
-# Cuando un usuario paga en Mercado Pago, MP enviará una solicitud POST a nuestra URL con los detalles del pago.
-# Esta API recibe la notificación, verifica el pago y actualiza la fecha de vencimiento de la suscripción del cliente.
+// Mercado Pago Webhook Payment Notification
+// Cuando un usuario paga en Mercado Pago, MP enviará una solicitud POST a nuestra URL con los detalles del pago.
+// Esta API recibe la notificación, verifica el pago y actualiza la fecha de vencimiento de la suscripción del cliente.
 
-    import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { supabase } from '@/lib/supabase';
 
