@@ -3,6 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary-color: #f97316; /* Default Orange */
 }
 
 @theme inline {
@@ -10,17 +11,31 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Map Tailwind 'orange-600' class-like behavior to use our dynamic variable if needed, 
+     but simpler to create a custom class */
+  --color-primary: var(--primary-color);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Helper utility for dynamic background */
+.bg-primary {
+    background-color: var(--primary-color) !important;
+}
+.text-primary {
+    color: var(--primary-color) !important;
+}
+.border-primary {
+    border-color: var(--primary-color) !important;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Animations */
+@keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
+.animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
