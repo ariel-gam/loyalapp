@@ -352,7 +352,23 @@ export default function AdminPage() {
 
                         {activeTab === 'stats' && (
                             <div>
-                                <h2 className="text-2xl font-bold text-gray-800 mb-6">Estadísticas</h2>
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold text-gray-800">Estadísticas</h2>
+                                    <button
+                                        onClick={() => {
+                                            setConfirmation({
+                                                message: '⚠️ ¿Borrar todas las estadísticas? Esto reiniciará el historial de ventas pero NO borrará los pedidos ni clientes.',
+                                                onConfirm: async () => {
+                                                    await resetAllStats();
+                                                    loadData();
+                                                }
+                                            });
+                                        }}
+                                        className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-3 py-1 rounded hover:bg-red-50 transition"
+                                    >
+                                        📉 Limpiar Estadísticas
+                                    </button>
+                                </div>
                                 {/* Simple Stats View */}
                                 <div className="flex gap-2 mb-4">
                                     {(['day', 'week', 'month'] as const).map(p => (
