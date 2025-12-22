@@ -142,9 +142,21 @@ export default function AdminPage() {
                 <div className="flex items-center gap-2">
                     <h1 className="text-xl font-bold text-gray-800">{storeInfo?.store_name}</h1>
                     {storeInfo?.slug && (
-                        <a href={`/${storeInfo.slug}`} target="_blank" className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded hover:bg-orange-200 transition">
-                            Ver Tienda ↗
-                        </a>
+                        <div className="flex items-center gap-2">
+                            <a href={`/${storeInfo.slug}`} target="_blank" className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded hover:bg-orange-200 transition">
+                                Ver Tienda ↗
+                            </a>
+                            <button
+                                onClick={() => {
+                                    const url = `${window.location.origin}/${storeInfo.slug}`;
+                                    navigator.clipboard.writeText(url);
+                                    alert('¡Link copiado al portapapeles! 📋\n' + url);
+                                }}
+                                className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200 transition border border-gray-300 flex items-center gap-1"
+                            >
+                                🔗 Copiar Link
+                            </button>
+                        </div>
                     )}
                 </div>
                 <div className="flex gap-2 sm:gap-4 overflow-x-auto">
