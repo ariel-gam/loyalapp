@@ -7,25 +7,26 @@ import { Product } from '@/data/products';
 
 interface CatalogProps {
     slug: string;
+    initialProducts?: Product[];
 }
 
-export default function Catalog({ slug }: CatalogProps) {
+export default function Catalog({ slug, initialProducts = [] }: CatalogProps) {
     const [activeCategory, setActiveCategory] = useState(staticCategories[0].id);
-    const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [products, setProducts] = useState<Product[]>(initialProducts);
+    const [loading, setLoading] = useState(!initialProducts.length);
 
     useEffect(() => {
+        if (initialProducts.length > 0) {
+            setLoading(false);
+            return;
+        }
+
         async function fetchProducts() {
             setLoading(true);
             try {
                 const res = await fetch(`/api/products?slug=${slug}`);
                 if (!res.ok) throw new Error('Failed to fetch');
                 const data = await res.json();
-
-                // Map API data to Product interface if needed, or API already returns correct shape
-                // API route returns: { products: serializedProducts }
-                // serializedProducts logic matches Product interface from prompt history.
-
                 setProducts(data.products || []);
             } catch (error) {
                 console.error("Catalog load error", error);
@@ -34,7 +35,7 @@ export default function Catalog({ slug }: CatalogProps) {
             }
         }
         fetchProducts();
-    }, []);
+    }, [slug, initialProducts]);
 
     // Also filter out unavailable products
     const filteredProducts = products.filter(
