@@ -391,8 +391,12 @@ export default function AdminPage() {
                                 </div>
                                 {/* Simple Stats View */}
                                 <div className="flex gap-2 mb-4">
-                                    {(['day', 'week', 'month'] as const).map(p => (
-                                        <button key={p} onClick={() => setRankingPeriod(p)} className={`px-3 py-1 rounded capitalize ${rankingPeriod === p ? 'bg-orange-500 text-white' : 'bg-gray-200'}`}>{p}</button>
+                                    {[
+                                        { id: 'day', label: 'Día' },
+                                        { id: 'week', label: 'Semana' },
+                                        { id: 'month', label: 'Mes' }
+                                    ].map((p) => (
+                                        <button key={p.id} onClick={() => setRankingPeriod(p.id as any)} className={`px-3 py-1 rounded capitalize ${rankingPeriod === p.id ? 'bg-orange-500 text-white' : 'bg-gray-200'}`}>{p.label}</button>
                                     ))}
                                 </div>
                                 <div className="bg-white p-6 rounded-xl shadow-sm">
