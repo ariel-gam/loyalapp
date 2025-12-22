@@ -53,6 +53,49 @@ export default function LandingPage() {
             <p className="text-orange-100 text-sm">Controla tus ventas, productos y base de clientes desde tu administrador.</p>
           </div>
         </div>
+
+        {/* Pricing Section */}
+        <div className="mt-32 w-full max-w-5xl">
+          <h3 className="text-3xl md:text-5xl font-bold mb-12 text-center">Planes Simples</h3>
+          <div className="flex justify-center">
+            <div className="bg-gradient-to-b from-amber-500/20 to-orange-600/20 backdrop-blur-sm rounded-3xl p-8 border-2 border-amber-400/30 flex flex-col relative overflow-hidden max-w-lg w-full transform hover:scale-105 transition-all duration-300 shadow-2xl">
+              <div className="absolute top-0 right-0 bg-amber-400 text-orange-900 text-xs font-bold px-3 py-1 rounded-bl-xl">TODO INCLUIDO</div>
+              <h4 className="text-3xl font-bold mb-2">Plan Profesional</h4>
+              <p className="text-orange-200 mb-6 text-sm">Todo lo que necesitas para vender más.</p>
+              <div className="text-5xl font-extrabold mb-8">$60.000 <span className="text-xl font-normal opacity-70">ARS / mes</span></div>
+
+              <ul className="space-y-4 mb-8 flex-1 opacity-90 text-lg">
+                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl">✓</span> Carta Digital Autoadministrable</li>
+                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl">✓</span> Pedidos Ilimitados por WhatsApp</li>
+                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl">✓</span> Panel de Control y Estadísticas</li>
+                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl">✓</span> 0% Comisiones por venta</li>
+                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl">✓</span> Soporte Técnico Prioritario</li>
+              </ul>
+
+              <Link href="/login" className="bg-gradient-to-r from-amber-400 to-orange-500 text-white w-full py-4 rounded-xl font-bold text-xl hover:opacity-90 transition text-center shadow-lg uppercase tracking-wide">
+                Empezar Ahora
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Testimonials */}
+        <div className="mt-32 mb-20 w-full max-w-5xl">
+          <h3 className="text-3xl md:text-5xl font-bold mb-12 text-center">Confían en nosotros</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { text: "Desde que uso LoyalApp, mis pedidos por WhatsApp son mucho más ordenados. ¡Me ahorró horas de trabajo!", author: "Carlos M.", role: "Dueño de Pizzería Napoli" },
+              { text: "A mis clientes les encanta ver el menú con fotos y armar su pedido. Las ventas subieron un 20%.", author: "Sofia R.", role: "La Burguesía" },
+              { text: "La configuración fue súper rápida. En 10 minutos ya estaba compartiendo mi link.", author: "Juan P.", role: "Sushi Time" }
+            ].map((t, i) => (
+              <div key={i} className="bg-white/10 p-6 rounded-2xl border border-white/5">
+                <p className="italic text-orange-50 mb-4">"{t.text}"</p>
+                <div className="font-bold">{t.author}</div>
+                <div className="text-xs text-orange-200 uppercase tracking-wide">{t.role}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </main>
 
       <footer className="text-center p-8 text-orange-200/60 text-sm border-t border-white/10">
