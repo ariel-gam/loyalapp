@@ -351,21 +351,38 @@ export default function AdminPage() {
                                 </div>
                                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                                     {/* Simple list or table */}
-                                    {filteredCustomers.map(c => (
-                                        <div key={c.id} className="p-4 border-b border-gray-100 hover:bg-gray-50 flex justify-between items-center">
-                                            <div>
-                                                <p className="font-bold text-gray-900">{c.name}</p>
-                                                <p className="text-sm text-gray-500">{c.phone}</p>
+                                    {filteredCustomers.map(c => {
+                                        const isInactive = c.daysSinceLastOrder > 20;
+                                        const message = isInactive
+                                            ? `Hola ${c.name}, ¡te extrañamos! 🏃‍♂️💨\n\nHace mucho que no pasas por aquí. Te dejamos un descuento especial para hoy 🎁.\n\nPide aquí: ${typeof window !== 'undefined' ? window.location.origin : ''}/${storeInfo.slug}`
+                                            : `Hola ${c.name}, ¡gracias por elegirnos siempre! 🍕`;
+
+                                        return (
+                                            <div key={c.id} className="p-4 border-b border-gray-100 hover:bg-gray-50 flex justify-between items-center group">
+                                                <div>
+                                                    <p className="font-bold text-gray-900 flex items-center gap-2">
+                                                        {c.name}
+                                                        <a
+                                                            href={`https://wa.me/${c.phone}?text=${encodeURIComponent(message)}`}
+                                                            target="_blank"
+                                                            className="opacity-0 group-hover:opacity-100 transition-opacity bg-green-100 text-green-700 p-1.5 rounded-full hover:bg-green-200"
+                                                            title={isInactive ? "Enviar promo de recuperación" : "Enviar mensaje"}
+                                                        >
+                                                            💬
+                                                        </a>
+                                                    </p>
+                                                    <p className="text-sm text-gray-500">{c.phone}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="font-bold text-sm">${c.totalSpent.toLocaleString('es-AR')}</p>
+                                                    <p className="text-xs text-gray-500">{c.totalOrders} pedidos</p>
+                                                    <p className={`text-xs ${isInactive ? 'text-red-500 font-bold' : 'text-green-600'}`}>
+                                                        Hace {c.daysSinceLastOrder} días
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-sm">${c.totalSpent.toLocaleString('es-AR')}</p>
-                                                <p className="text-xs text-gray-500">{c.totalOrders} pedidos</p>
-                                                <p className={`text-xs ${c.daysSinceLastOrder > 20 ? 'text-red-500 font-bold' : 'text-green-600'}`}>
-                                                    Hace {c.daysSinceLastOrder} días
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
