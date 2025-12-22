@@ -22,8 +22,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "LoyalFood",
-  description: "Pide tu comida favorita sin esperas.",
+  title: "LoyalApp",
+  description: "Pide tu comida favorita.",
   manifest: "/manifest.json",
 };
 
