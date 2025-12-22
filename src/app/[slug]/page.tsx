@@ -5,6 +5,10 @@ import { getStoreBySlug } from '@/actions/settingsActions';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 
+export async function generateStaticParams() {
+    return [{ slug: 'demo-pizza' }];
+}
+
 export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
     const store = await getStoreBySlug(slug);
