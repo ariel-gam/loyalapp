@@ -365,7 +365,7 @@ export default function AdminPage() {
                                                         <a
                                                             href={`https://wa.me/${c.phone}?text=${encodeURIComponent(message)}`}
                                                             target="_blank"
-                                                            className="opacity-0 group-hover:opacity-100 transition-opacity bg-green-100 text-green-700 p-1.5 rounded-full hover:bg-green-200"
+                                                            className="bg-green-100 text-green-700 p-1.5 rounded-full hover:bg-green-200 transition-colors"
                                                             title={isInactive ? "Enviar promo de recuperación" : "Enviar mensaje"}
                                                         >
                                                             💬
