@@ -295,20 +295,24 @@ export default function AdminPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {products.map((product) => (
                                         <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative group">
-                                            <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                                <button onClick={() => handleEditProduct(product)} className="bg-blue-500 text-white p-2 rounded-full shadow hover:bg-blue-600">✏️</button>
-                                                <button onClick={() => handleDeleteProduct(product.id)} className="bg-red-500 text-white p-2 rounded-full shadow hover:bg-red-600">🗑</button>
-                                            </div>
                                             <div className="h-48 relative bg-gray-100">
                                                 {product.image_url && <Image src={product.image_url} alt={product.name} fill className="object-cover" />}
                                             </div>
                                             <div className="p-4">
                                                 <h3 className="font-bold text-gray-900">{product.name}</h3>
-                                                <p className="text-sm text-gray-500 mb-2">{product.category_id}</p>
-                                                <div className="flex justify-between items-center">
+                                                <p className="text-sm text-gray-500 mb-2 capitalize">{product.category_id.replace('-', ' ')}</p>
+                                                <div className="flex justify-between items-center mb-3">
                                                     <span className="font-bold text-lg">${product.base_price?.toLocaleString('es-AR')}</span>
                                                     <button onClick={() => handleToggle(product.id, product.is_available)} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${product.is_available !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
                                                         {product.is_available !== false ? 'Disponible' : 'Agotado'}
+                                                    </button>
+                                                </div>
+                                                <div className="flex gap-2 pt-2 border-t border-gray-100">
+                                                    <button onClick={() => handleEditProduct(product)} className="flex-1 bg-blue-50 text-blue-600 text-sm font-medium py-1.5 rounded hover:bg-blue-100 transition flex items-center justify-center gap-1">
+                                                        ✏️ Editar
+                                                    </button>
+                                                    <button onClick={() => handleDeleteProduct(product.id)} className="flex-1 bg-red-50 text-red-600 text-sm font-medium py-1.5 rounded hover:bg-red-100 transition flex items-center justify-center gap-1">
+                                                        🗑 Eliminar
                                                     </button>
                                                 </div>
                                             </div>
@@ -476,11 +480,16 @@ export default function AdminPage() {
                             <input name="name" placeholder="Nombre" defaultValue={editingProduct?.name} required className="w-full border p-2 rounded" />
                             <textarea name="description" placeholder="Descripción" defaultValue={editingProduct?.description} className="w-full border p-2 rounded" />
                             <input name="price" type="number" placeholder="Precio" defaultValue={editingProduct?.base_price} required className="w-full border p-2 rounded" />
-                            <select name="categoryId" defaultValue={editingProduct?.category_id || 'pizzas'} className="w-full border p-2 rounded">
+                            <select name="categoryId" defaultValue={editingProduct?.category_id || 'pizzas'} className="w-full border p-2 rounded capitalize">
                                 <option value="pizzas">Pizzas</option>
                                 <option value="empanadas">Empanadas</option>
                                 <option value="hamburguesas">Hamburguesas</option>
                                 <option value="bebidas">Bebidas</option>
+                                <option value="sandwich-milanesa">Sandwich de Milanesas</option>
+                                <option value="sandwich-miga">Sandwich de Miga</option>
+                                <option value="papas-fritas">Papas Fritas</option>
+                                <option value="arrollados">Arrollados</option>
+                                <option value="postres">Postres</option>
                             </select>
                             <input name="image" placeholder="URL Imagen" defaultValue={editingProduct?.image_url} className="w-full border p-2 rounded" />
 
