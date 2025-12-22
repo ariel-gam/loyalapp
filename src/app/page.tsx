@@ -27,12 +27,15 @@ export default function LandingPage() {
           Creamos tu carta digital y panel de control en segundos. Recibe pedidos en WhatsApp y fideliza a tus clientes.
         </p>
 
-        <div className="flex gap-4 flex-col sm:flex-row items-center w-full justify-center">
+        <div className="flex gap-4 flex-col sm:flex-row items-center w-full justify-center flex-wrap">
           <Link href="/login" className="bg-white text-orange-600 text-lg px-8 py-4 rounded-full font-bold shadow-xl hover:shadow-2xl hover:bg-gray-50 transform hover:-translate-y-1 transition-all w-full sm:w-auto">
             Crear mi Carta Digital
           </Link>
-          <Link href="/demo-pizza" className="border-2 border-white/30 text-white text-lg px-8 py-4 rounded-full font-bold hover:bg-white/10 transition-all w-full sm:w-auto">
-            Ver Demo (Pizzería)
+          <Link href="/demo-pizza" className="border-2 border-white/30 text-white text-lg px-6 py-4 rounded-full font-bold hover:bg-white/10 transition-all w-full sm:w-auto text-center">
+            🍕 Ver Demo Pizzería
+          </Link>
+          <Link href="/demo-admin" className="border-2 border-white/30 text-white text-lg px-6 py-4 rounded-full font-bold hover:bg-white/10 transition-all w-full sm:w-auto text-center">
+            📊 Probar Panel Admin
           </Link>
         </div>
 
