@@ -40,7 +40,7 @@ export default function LandingPage() {
           <div className="p-4">
             <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">🚀</div>
             <h3 className="font-bold text-xl mb-2">Tu link único</h3>
-            <p className="text-orange-100 text-sm">loyalfood.com/tu-negocio. Comparte tu carta digital en Instagram y WhatsApp.</p>
+            <p className="text-orange-100 text-sm">loyalapp.com/tu-negocio. Comparte tu carta digital en Instagram y WhatsApp.</p>
           </div>
           <div className="p-4">
             <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">📱</div>
@@ -56,7 +56,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="text-center p-8 text-orange-200/60 text-sm border-t border-white/10">
-        &copy; 2025 LoyalFood. Todos los derechos reservados.
+        &copy; 2026 LoyalApp. Todos los derechos reservados.
       </footer>
     </div>
   )
