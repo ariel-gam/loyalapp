@@ -142,20 +142,24 @@ export default function AdminPage() {
                 <div className="flex items-center gap-2">
                     <h1 className="text-xl font-bold text-gray-800">{storeInfo?.store_name}</h1>
                     {storeInfo?.slug && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 sm:mt-0">
                             <a href={`/${storeInfo.slug}`} target="_blank" className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded hover:bg-orange-200 transition">
                                 Ver Tienda ↗
                             </a>
-                            <button
-                                onClick={() => {
-                                    const url = `${window.location.origin}/${storeInfo.slug}`;
-                                    navigator.clipboard.writeText(url);
-                                    alert('¡Link copiado al portapapeles! 📋\n' + url);
-                                }}
-                                className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200 transition border border-gray-300 flex items-center gap-1"
-                            >
-                                🔗 Copiar Link
-                            </button>
+                            <div className="flex items-center gap-1 bg-gray-100 border border-gray-300 rounded px-2 py-1">
+                                <span className="text-xs text-gray-500 font-mono hidden sm:inline">{typeof window !== 'undefined' ? window.location.origin : ''}/{storeInfo.slug}</span>
+                                <button
+                                    onClick={() => {
+                                        const url = `${window.location.origin}/${storeInfo.slug}`;
+                                        navigator.clipboard.writeText(url);
+                                        alert('¡Link copiado! 📋\n\n' + url + '\n\nCompártelo en Instagram o WhatsApp.');
+                                    }}
+                                    className="text-xs font-bold text-gray-700 hover:text-orange-600 transition ml-1"
+                                    title="Copiar Link Público"
+                                >
+                                    📋 Copiar
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
