@@ -43,7 +43,7 @@ export default function LandingPage() {
             <p className="text-orange-100 text-sm">Recibí el detalle exacto (sabores, cocina) directo al WhatsApp.</p>
           </div>
           <div className="p-4">
-            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">�</div>
+            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">📸</div>
             <h3 className="font-bold text-xl mb-2">Fotos que venden</h3>
             <p className="text-orange-100 text-sm">Galería visual atractiva para tentar al cliente y aumentar el ticket.</p>
           </div>
@@ -115,14 +115,14 @@ export default function LandingPage() {
             {/* Turnera Features */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10 text-left max-w-4xl mx-auto">
               <div className="bg-orange-900/20 p-4 rounded-2xl border border-white/5 flex items-start gap-4">
-                <div className="text-3xl">�</div>
+                <div className="text-3xl">💰</div>
                 <div>
                   <h4 className="font-bold text-lg text-white">Señas Automáticas</h4>
                   <p className="text-orange-100 text-sm">Con Mercado Pago para evitar que el cliente falte (No-Show).</p>
                 </div>
               </div>
               <div className="bg-orange-900/20 p-4 rounded-2xl border border-white/5 flex items-start gap-4">
-                <div className="text-3xl">�</div>
+                <div className="text-3xl">🎛️</div>
                 <div>
                   <h4 className="font-bold text-lg text-white">Panel de Control Total</h4>
                   <p className="text-orange-100 text-sm">Gestiona toda tu agenda fácilmente desde tu celular.</p>
