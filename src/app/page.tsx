@@ -7,7 +7,6 @@ export default function LandingPage() {
       <header className="p-6 flex justify-between items-center max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-2">
           <span className="text-2xl font-bold tracking-tight">LoyalApp</span>
-
         </div>
         <nav className="flex gap-6 items-center">
           <Link href="/login" className="hidden sm:block hover:text-orange-100 font-medium transition">Iniciar Sesión</Link>
@@ -18,47 +17,45 @@ export default function LandingPage() {
       <main className="flex-1 flex flex-col items-center justify-center text-center p-6 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-500/30 rounded-full blur-3xl -z-10"></div>
 
+        {/* LoyalFood / Pedidos Section - Updated Copy */}
         <h2 className="text-5xl md:text-7xl font-extrabold mb-8 tracking-tight leading-tight">
-          Tu propio sistema de pedidos<br />
-          <span className="text-amber-300">sin comisiones.</span>
+          Tu Pizzería en el <br />
+          <span className="text-amber-300">celular de tus clientes.</span>
         </h2>
 
         <p className="text-xl md:text-2xl mb-12 max-w-2xl text-orange-50 leading-relaxed">
-          Creamos tu carta digital y panel de control en segundos. Recibe pedidos en WhatsApp y fideliza a tus clientes.
+          Olvídate de los PDFs que nadie lee. Ofrece una carta interactiva y profesional.
         </p>
 
         <div className="flex gap-4 flex-col sm:flex-row items-center w-full justify-center flex-wrap">
           <Link href="/login" className="bg-white text-orange-600 text-lg px-8 py-4 rounded-full font-bold shadow-xl hover:shadow-2xl hover:bg-gray-50 transform hover:-translate-y-1 transition-all w-full sm:w-auto">
-            Crear mi Carta Digital
+            Digitalizar mi negocio
           </Link>
           <Link href="/demo-pizza" className="border-2 border-white/30 text-white text-lg px-6 py-4 rounded-full font-bold hover:bg-white/10 transition-all w-full sm:w-auto text-center">
-            🍕 Ver Demo Pizzería
-          </Link>
-          <Link href="/demo-admin" className="border-2 border-white/30 text-white text-lg px-6 py-4 rounded-full font-bold hover:bg-white/10 transition-all w-full sm:w-auto text-center">
-            📊 Probar Panel Admin
+            🍕 Ver Menú de Ejemplo
           </Link>
         </div>
 
         <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl text-left bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/10">
           <div className="p-4">
-            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">🚀</div>
-            <h3 className="font-bold text-xl mb-2">Tu link único</h3>
-            <p className="text-orange-100 text-sm">loyalapp.com/tu-negocio. Comparte tu carta digital en Instagram y WhatsApp.</p>
+            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">✅</div>
+            <h3 className="font-bold text-xl mb-2">Pedidos Claros</h3>
+            <p className="text-orange-100 text-sm">Recibí el detalle exacto (sabores, cocina) directo al WhatsApp.</p>
           </div>
           <div className="p-4">
-            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">📱</div>
-            <h3 className="font-bold text-xl mb-2">Pedidos Directos</h3>
-            <p className="text-orange-100 text-sm">Los clientes arman su pedido y te llega listo a WhatsApp. Sin intermediarios.</p>
+            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">�</div>
+            <h3 className="font-bold text-xl mb-2">Fotos que venden</h3>
+            <p className="text-orange-100 text-sm">Galería visual atractiva para tentar al cliente y aumentar el ticket.</p>
           </div>
           <div className="p-4">
-            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">📊</div>
-            <h3 className="font-bold text-xl mb-2">Panel con estadísticas</h3>
-            <p className="text-orange-100 text-sm">Controla tus ventas, productos y base de clientes desde tu administrador.</p>
+            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">🏷️</div>
+            <h3 className="font-bold text-xl mb-2">Gestión de Stock/Precios</h3>
+            <p className="text-orange-100 text-sm">Cambiá los precios en 10 segundos ante la inflación.</p>
           </div>
         </div>
 
 
-        {/* Pricing Section */}
+        {/* Pricing Section (LoyalFood) */}
         <div className="mt-32 w-full max-w-5xl">
           <h3 className="text-3xl md:text-5xl font-bold mb-12 text-center">Planes Simples</h3>
           <div className="flex justify-center">
@@ -101,55 +98,66 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Turnera Section */}
+        {/* Turnera Section - Updated Copy */}
         <div className="mt-32 mb-24 w-full max-w-5xl text-center">
           <div className="bg-white/10 backdrop-blur-md p-10 rounded-3xl border border-white/10 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl -z-10 translate-x-1/3 -translate-y-1/3"></div>
 
             <h2 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
-              Tu Negocio de Turnos <br />
+              Tu Negocio de Turnos, <br />
               <span className="text-amber-300">en Piloto Automático.</span>
             </h2>
 
             <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-orange-50 leading-relaxed">
-              Deja de perder tiempo respondiendo WhatsApp. Permite que tus clientes reserven y paguen sus canchas o citas 100% online.
+              Recupera tu tiempo. Deja que el sistema trabaje 24/7 reservando y cobrando por vos.
             </p>
 
             {/* Turnera Features */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10 text-left max-w-4xl mx-auto">
               <div className="bg-orange-900/20 p-4 rounded-2xl border border-white/5 flex items-start gap-4">
-                <div className="text-3xl">📅</div>
-                <div>
-                  <h4 className="font-bold text-lg text-white">Agenda 24/7</h4>
-                  <p className="text-orange-100 text-sm">Tus clientes reservan a cualquier hora sin molestarte.</p>
-                </div>
-              </div>
-              <div className="bg-orange-900/20 p-4 rounded-2xl border border-white/5 flex items-start gap-4">
-                <div className="text-3xl">💳</div>
+                <div className="text-3xl">�</div>
                 <div>
                   <h4 className="font-bold text-lg text-white">Señas Automáticas</h4>
-                  <p className="text-orange-100 text-sm">Cobra señas con Mercado Pago para confirmar turnos.</p>
+                  <p className="text-orange-100 text-sm">Con Mercado Pago para evitar que el cliente falte (No-Show).</p>
                 </div>
               </div>
               <div className="bg-orange-900/20 p-4 rounded-2xl border border-white/5 flex items-start gap-4">
-                <div className="text-3xl">🔔</div>
+                <div className="text-3xl">�</div>
                 <div>
-                  <h4 className="font-bold text-lg text-white">Recordatorios</h4>
-                  <p className="text-orange-100 text-sm">Reduce el ausentismo con avisos automáticos.</p>
+                  <h4 className="font-bold text-lg text-white">Panel de Control Total</h4>
+                  <p className="text-orange-100 text-sm">Gestiona toda tu agenda fácilmente desde tu celular.</p>
+                </div>
+              </div>
+              <div className="bg-orange-900/20 p-4 rounded-2xl border border-white/5 flex items-start gap-4">
+                <div className="text-3xl">🤝</div>
+                <div>
+                  <h4 className="font-bold text-lg text-white">Cero Comisiones</h4>
+                  <p className="text-orange-100 text-sm">Suscripción fija de $35.000. Tu ganancia es tuya.</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex justify-center gap-4 flex-wrap">
               <a
                 href="https://turnera.loyalapp.com.ar/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-white text-orange-600 text-lg px-8 py-4 rounded-full font-bold shadow-xl hover:shadow-2xl hover:bg-gray-50 transform hover:-translate-y-1 transition-all inline-flex items-center gap-2"
+                className="bg-white text-orange-600 text-lg px-6 py-4 rounded-full font-bold shadow-xl hover:shadow-2xl hover:bg-gray-50 transform hover:-translate-y-1 transition-all inline-flex items-center gap-2"
               >
-                📅 Ir a Turnera
+                📅 Ver App Clientes
+              </a>
+              <a
+                href="https://turnera.loyalapp.com.ar/admin"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border-2 border-white/30 text-white text-lg px-6 py-4 rounded-full font-bold hover:bg-white/10 transition-all inline-flex items-center gap-2 text-center"
+              >
+                ⚙️ Panel Admin
               </a>
             </div>
+            <p className="mt-6 text-orange-100/70 text-sm">
+              Datos de acceso demo: usuario <strong>cancha-padel</strong> / clave <strong>admin</strong>
+            </p>
           </div>
         </div>
       </main>
