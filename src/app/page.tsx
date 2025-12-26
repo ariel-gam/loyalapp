@@ -7,7 +7,7 @@ export default function LandingPage() {
       <header className="p-6 flex justify-between items-center max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-2">
           <span className="text-2xl font-bold tracking-tight">LoyalApp</span>
-          <span className="bg-white/20 text-xs px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">SaaS</span>
+
         </div>
         <nav className="flex gap-6 items-center">
           <Link href="/login" className="hidden sm:block hover:text-orange-100 font-medium transition">Iniciar Sesión</Link>
@@ -32,10 +32,10 @@ export default function LandingPage() {
             Crear mi Carta Digital
           </Link>
           <Link href="/demo-pizza" className="border-2 border-white/30 text-white text-lg px-6 py-4 rounded-full font-bold hover:bg-white/10 transition-all w-full sm:w-auto text-center">
-             Ver Demo Pizzería
+            Ver Demo Pizzería
           </Link>
           <Link href="/demo-admin" className="border-2 border-white/30 text-white text-lg px-6 py-4 rounded-full font-bold hover:bg-white/10 transition-all w-full sm:w-auto text-center">
-             Probar Panel Admin
+            Probar Panel Admin
           </Link>
         </div>
 
@@ -100,17 +100,17 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-        
+
         {/* Turnera Section */}
         <div className="mt-32 mb-24 w-full max-w-5xl text-center">
           <div className="bg-white/10 backdrop-blur-md p-10 rounded-3xl border border-white/10 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl -z-10 translate-x-1/3 -translate-y-1/3"></div>
-            
+
             <h2 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
               Tu Negocio de Turnos <br />
               <span className="text-amber-300">en Piloto Automático.</span>
             </h2>
-            
+
             <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-orange-50 leading-relaxed">
               Deja de perder tiempo respondiendo WhatsApp. Permite que tus clientes reserven y paguen sus canchas o citas 100% online.
             </p>
@@ -139,15 +139,15 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex justify-center">
-              <a 
-                href="https://turnera.loyalapp.com.ar/" 
-                target="_blank" 
+              <a
+                href="https://turnera.loyalapp.com.ar/"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="bg-white text-orange-600 text-lg px-8 py-4 rounded-full font-bold shadow-xl hover:shadow-2xl hover:bg-gray-50 transform hover:-translate-y-1 transition-all inline-flex items-center gap-2"
               >
-                 Ir a Turnera
+                Ir a Turnera
               </a>
             </div>
           </div>
