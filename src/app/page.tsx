@@ -151,6 +151,57 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
+        {/* Turnera Section */}
+        <div className="mt-32 mb-24 w-full max-w-5xl text-center">
+          <div className="bg-white/10 backdrop-blur-md p-10 rounded-3xl border border-white/10 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl -z-10 translate-x-1/3 -translate-y-1/3"></div>
+
+            <h2 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
+              Tu Negocio de Turnos <br />
+              <span className="text-amber-300">en Piloto Automático.</span>
+            </h2>
+
+            <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-orange-50 leading-relaxed">
+              Deja de perder tiempo respondiendo WhatsApp. Permite que tus clientes reserven y paguen sus canchas o citas 100% online.
+            </p>
+
+            {/* Turnera Features */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10 text-left max-w-4xl mx-auto">
+              <div className="bg-orange-900/20 p-4 rounded-2xl border border-white/5 flex items-start gap-4">
+                <div className="text-3xl">📅</div>
+                <div>
+                  <h4 className="font-bold text-lg text-white">Agenda 24/7</h4>
+                  <p className="text-orange-100 text-sm">Tus clientes reservan a cualquier hora sin molestarte.</p>
+                </div>
+              </div>
+              <div className="bg-orange-900/20 p-4 rounded-2xl border border-white/5 flex items-start gap-4">
+                <div className="text-3xl">💳</div>
+                <div>
+                  <h4 className="font-bold text-lg text-white">Señas Automáticas</h4>
+                  <p className="text-orange-100 text-sm">Cobra señas con Mercado Pago para confirmar turnos.</p>
+                </div>
+              </div>
+              <div className="bg-orange-900/20 p-4 rounded-2xl border border-white/5 flex items-start gap-4">
+                <div className="text-3xl">🔔</div>
+                <div>
+                  <h4 className="font-bold text-lg text-white">Recordatorios</h4>
+                  <p className="text-orange-100 text-sm">Reduce el ausentismo con avisos automáticos.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <a
+                href="https://turnera.loyalapp.com.ar/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white text-orange-600 text-lg px-8 py-4 rounded-full font-bold shadow-xl hover:shadow-2xl hover:bg-gray-50 transform hover:-translate-y-1 transition-all inline-flex items-center gap-2"
+              >
+                📅 Ir a Turnera
+              </a>
+            </div>
+          </div>
+        </div>
       </main>
 
       <footer className="text-center p-8 text-orange-200/60 text-sm border-t border-white/10">
