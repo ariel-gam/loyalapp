@@ -32,26 +32,26 @@ export default function LandingPage() {
             Crear mi Carta Digital
           </Link>
           <Link href="/demo-pizza" className="border-2 border-white/30 text-white text-lg px-6 py-4 rounded-full font-bold hover:bg-white/10 transition-all w-full sm:w-auto text-center">
-            Ver Demo Pizzería
+            🍕 Ver Demo Pizzería
           </Link>
           <Link href="/demo-admin" className="border-2 border-white/30 text-white text-lg px-6 py-4 rounded-full font-bold hover:bg-white/10 transition-all w-full sm:w-auto text-center">
-            Probar Panel Admin
+            📊 Probar Panel Admin
           </Link>
         </div>
 
         <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl text-left bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/10">
           <div className="p-4">
-            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4"></div>
+            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">🚀</div>
             <h3 className="font-bold text-xl mb-2">Tu link único</h3>
             <p className="text-orange-100 text-sm">loyalapp.com/tu-negocio. Comparte tu carta digital en Instagram y WhatsApp.</p>
           </div>
           <div className="p-4">
-            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4"></div>
+            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">📱</div>
             <h3 className="font-bold text-xl mb-2">Pedidos Directos</h3>
             <p className="text-orange-100 text-sm">Los clientes arman su pedido y te llega listo a WhatsApp. Sin intermediarios.</p>
           </div>
           <div className="p-4">
-            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4"></div>
+            <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4">📊</div>
             <h3 className="font-bold text-xl mb-2">Panel con estadísticas</h3>
             <p className="text-orange-100 text-sm">Controla tus ventas, productos y base de clientes desde tu administrador.</p>
           </div>
@@ -66,14 +66,14 @@ export default function LandingPage() {
               <div className="absolute top-0 right-0 bg-amber-400 text-orange-900 text-xs font-bold px-3 py-1 rounded-bl-xl">TODO INCLUIDO</div>
               <h4 className="text-3xl font-bold mb-2">Plan Profesional</h4>
               <p className="text-orange-200 mb-6 text-sm">Todo lo que necesitas para vender más.</p>
-              <div className="text-5xl font-extrabold mb-8">.000 <span className="text-xl font-normal opacity-70">ARS / mes</span></div>
+              <div className="text-5xl font-extrabold mb-8">$60.000 <span className="text-xl font-normal opacity-70">ARS / mes</span></div>
 
               <ul className="space-y-4 mb-8 flex-1 opacity-90 text-lg">
-                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl"></span> Carta Digital Autoadministrable</li>
-                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl"></span> Pedidos Ilimitados por WhatsApp</li>
-                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl"></span> Panel de Control y Estadísticas</li>
-                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl"></span> 0% Comisiones por venta</li>
-                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl"></span> Soporte Técnico Prioritario</li>
+                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl">✓</span> Carta Digital Autoadministrable</li>
+                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl">✓</span> Pedidos Ilimitados por WhatsApp</li>
+                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl">✓</span> Panel de Control y Estadísticas</li>
+                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl">✓</span> 0% Comisiones por venta</li>
+                <li className="flex items-center gap-3"><span className="text-amber-300 text-xl">✓</span> Soporte Técnico Prioritario</li>
               </ul>
 
               <Link href="/login" className="bg-gradient-to-r from-amber-400 to-orange-500 text-white w-full py-4 rounded-xl font-bold text-xl hover:opacity-90 transition text-center shadow-lg uppercase tracking-wide">
@@ -118,21 +118,21 @@ export default function LandingPage() {
             {/* Turnera Features */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10 text-left max-w-4xl mx-auto">
               <div className="bg-orange-900/20 p-4 rounded-2xl border border-white/5 flex items-start gap-4">
-                <div className="text-3xl"></div>
+                <div className="text-3xl">📅</div>
                 <div>
                   <h4 className="font-bold text-lg text-white">Agenda 24/7</h4>
                   <p className="text-orange-100 text-sm">Tus clientes reservan a cualquier hora sin molestarte.</p>
                 </div>
               </div>
               <div className="bg-orange-900/20 p-4 rounded-2xl border border-white/5 flex items-start gap-4">
-                <div className="text-3xl"></div>
+                <div className="text-3xl">💳</div>
                 <div>
                   <h4 className="font-bold text-lg text-white">Señas Automáticas</h4>
                   <p className="text-orange-100 text-sm">Cobra señas con Mercado Pago para confirmar turnos.</p>
                 </div>
               </div>
               <div className="bg-orange-900/20 p-4 rounded-2xl border border-white/5 flex items-start gap-4">
-                <div className="text-3xl"></div>
+                <div className="text-3xl">🔔</div>
                 <div>
                   <h4 className="font-bold text-lg text-white">Recordatorios</h4>
                   <p className="text-orange-100 text-sm">Reduce el ausentismo con avisos automáticos.</p>
@@ -147,7 +147,7 @@ export default function LandingPage() {
                 rel="noopener noreferrer"
                 className="bg-white text-orange-600 text-lg px-8 py-4 rounded-full font-bold shadow-xl hover:shadow-2xl hover:bg-gray-50 transform hover:-translate-y-1 transition-all inline-flex items-center gap-2"
               >
-                Ir a Turnera
+                📅 Ir a Turnera
               </a>
             </div>
           </div>
