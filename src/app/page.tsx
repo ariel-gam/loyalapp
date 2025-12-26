@@ -57,6 +57,33 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* Turnera Section */}
+        <div className="mt-32 w-full max-w-5xl text-center">
+          <div className="bg-white/10 backdrop-blur-md p-10 rounded-3xl border border-white/10 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl -z-10 translate-x-1/3 -translate-y-1/3"></div>
+            
+            <h2 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
+              Tu Negocio de Turnos <br />
+              <span className="text-amber-300">en Piloto Automático.</span>
+            </h2>
+            
+            <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-orange-50 leading-relaxed">
+              Deja de perder tiempo respondiendo WhatsApp. Permite que tus clientes reserven y paguen sus canchas o citas 100% online.
+            </p>
+            
+            <div className="flex justify-center">
+              <a 
+                href="https://turnera.loyalapp.com.ar/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-white text-orange-600 text-lg px-8 py-4 rounded-full font-bold shadow-xl hover:shadow-2xl hover:bg-gray-50 transform hover:-translate-y-1 transition-all inline-flex items-center gap-2"
+              >
+                📅 Ir a Turnera
+              </a>
+            </div>
+          </div>
+        </div>
+
         {/* Pricing Section */}
         <div className="mt-32 w-full max-w-5xl">
           <h3 className="text-3xl md:text-5xl font-bold mb-12 text-center">Planes Simples</h3>

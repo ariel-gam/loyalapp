@@ -11,6 +11,19 @@ export interface StoreSettings {
 }
 
 export async function getStoreBySlug(slug: string) {
+    // Mock for Demo
+    if (slug === 'demo-pizza') {
+        return {
+            id: 'demo-uuid-123',
+            name: 'La Pizzería de Prueba',
+            slug: 'demo-pizza',
+            logo_url: null,
+            primary_color: '#f97316',
+            address: 'Calle Falsa 123',
+            phone: '5491112345678',
+        };
+    }
+
     const supabase = await createClient();
     const { data, error } = await supabase.from('stores').select('*').eq('slug', slug).single();
     if (error) return null;
