@@ -6,6 +6,7 @@ import { getRecentOrders, getAdminProducts, createProduct, deleteProduct, toggle
 import { getStoreSettings, updateStoreSettings } from '@/actions/settingsActions';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
+import { uploadProductImage } from '@/utils/uploadImage';
 
 export default function AdminPage() {
     const router = useRouter();
@@ -29,6 +30,10 @@ export default function AdminPage() {
 
     // Confirmation State
     const [confirmation, setConfirmation] = useState<{ message: string; onConfirm: () => void } | null>(null);
+
+    // Image Upload State
+    const [imageUrl, setImageUrl] = useState('');
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
         // Initial Data Load
@@ -116,11 +121,13 @@ export default function AdminPage() {
 
     const handleEditProduct = (product: any) => {
         setEditingProduct(product);
+        setImageUrl(product.image_url || '');
         setIsModalOpen(true);
     };
 
     const handleCreateNew = () => {
         setEditingProduct(null);
+        setImageUrl('');
         setIsModalOpen(true);
     };
 
@@ -512,7 +519,47 @@ export default function AdminPage() {
                                 <option value="arrollados">Arrollados</option>
                                 <option value="postres">Postres</option>
                             </select>
-                            <input name="image" placeholder="URL Imagen" defaultValue={editingProduct?.image_url} className="w-full border p-2 rounded" />
+
+                            <div className="space-y-2">
+                                <label className="block text-sm font-bold text-gray-700">Imagen</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        name="image"
+                                        placeholder="URL Imagen"
+                                        value={imageUrl}
+                                        onChange={(e) => setImageUrl(e.target.value)}
+                                        className="flex-1 border p-2 rounded"
+                                    />
+                                    <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded flex items-center gap-2 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                        <span className="text-xl">📷</span>
+                                        <span className="text-sm font-medium">{uploading ? '...' : 'Subir'}</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            disabled={uploading}
+                                            onChange={async (e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                    setUploading(true);
+                                                    try {
+                                                        const url = await uploadProductImage(e.target.files[0]);
+                                                        setImageUrl(url);
+                                                    } catch (err) {
+                                                        alert('Error subiendo imagen: ' + (err as any).message);
+                                                    } finally {
+                                                        setUploading(false);
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                </div>
+                                {imageUrl && (
+                                    <div className="relative h-40 w-full bg-gray-100 rounded overflow-hidden border border-gray-200">
+                                        <Image src={imageUrl} alt="Preview" fill className="object-contain" />
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Discounts handling simplified for MVP */}
                             <div className="bg-gray-50 p-2 rounded">
