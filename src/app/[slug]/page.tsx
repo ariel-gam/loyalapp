@@ -2,6 +2,7 @@ import Catalog from '@/components/Catalog';
 import CartButton from '@/components/CartButton';
 import CartModal from '@/components/CartModal';
 import { getStoreBySlug } from '@/actions/settingsActions';
+import { getProductsBySlug } from '@/actions/catalogActions';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 
@@ -10,7 +11,12 @@ export const revalidate = 0;
 
 export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
-    const store = await getStoreBySlug(slug);
+
+    // Parallel fetching for store details and products
+    const [store, products] = await Promise.all([
+        getStoreBySlug(slug),
+        getProductsBySlug(slug)
+    ]);
 
     if (!store) {
         notFound();
@@ -41,7 +47,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
                 )}
             </header>
 
-            <Catalog slug={slug} />
+            <Catalog slug={slug} initialProducts={products} />
 
             <CartButton />
             <CartModal store={store} />
