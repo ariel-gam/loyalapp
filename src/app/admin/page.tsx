@@ -455,7 +455,50 @@ export default function AdminPage() {
                                     <div><label className="text-sm font-bold">Nombre</label><input name="store_name" defaultValue={storeInfo.store_name} className="w-full border p-2 rounded" /></div>
                                     <div><label className="text-sm font-bold">Dirección</label><input name="address" defaultValue={storeInfo.address} className="w-full border p-2 rounded" /></div>
                                     <div><label className="text-sm font-bold">Teléfono/WhatsApp</label><input name="phone" defaultValue={storeInfo.phone} className="w-full border p-2 rounded" /></div>
-                                    <div><label className="text-sm font-bold">Logo URL</label><input name="logo_url" defaultValue={storeInfo.logo_url} className="w-full border p-2 rounded" /></div>
+
+                                    <div>
+                                        <label className="text-sm font-bold block mb-1">Logo URL</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                name="logo_url"
+                                                defaultValue={storeInfo.logo_url}
+                                                className="flex-1 border p-2 rounded"
+                                                id="logo-input" // Add ID to target with JS if needed, though we use defaultValue here. 
+                                            // Actually, for consistency with the other form, let's use controlled component ONLY if we want immediate preview update.
+                                            // But since the original form uses uncontrolled inputs (formData), we can just update the input's value using ref or direct manipulation? 
+                                            // Easier: Modify the form to be controlled? No, keep it uncontrolled but use state for the image URL input to support the upload button filling it.
+                                            // Let's use a small local component or just useState inside the map.
+                                            // Since we are inside the main AdminPage component, we can add a new state for logoUrl.
+                                            />
+                                            <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded flex items-center gap-2 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                                <span className="text-xl">📷</span>
+                                                <span className="text-sm font-medium">{uploading ? '...' : 'Subir'}</span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    disabled={uploading}
+                                                    onChange={async (e) => {
+                                                        if (e.target.files && e.target.files[0]) {
+                                                            setUploading(true);
+                                                            try {
+                                                                const url = await uploadProductImage(e.target.files[0]);
+                                                                // Update the input value directly since it is uncontrolled for now, or better, force a re-render.
+                                                                // Simplest way for this specific form:
+                                                                const input = document.querySelector('input[name="logo_url"]') as HTMLInputElement;
+                                                                if (input) input.value = url;
+                                                            } catch (err) {
+                                                                alert('Error subiendo imagen: ' + (err as any).message);
+                                                            } finally {
+                                                                setUploading(false);
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                    </div>
+
                                     <div><label className="text-sm font-bold">Color</label><input name="primary_color" type="color" defaultValue={storeInfo.primary_color || '#f97316'} className="h-10 w-full" /></div>
                                     <button className="w-full bg-orange-600 text-white font-bold py-2 rounded">Guardar</button>
                                 </form>
