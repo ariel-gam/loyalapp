@@ -500,7 +500,17 @@ export default function AdminPage() {
                                     </div>
 
                                     <div><label className="text-sm font-bold">Color</label><input name="primary_color" type="color" defaultValue={storeInfo.primary_color || '#f97316'} className="h-10 w-full" /></div>
-                                    <button className="w-full bg-orange-600 text-white font-bold py-2 rounded">Guardar</button>
+                                    <button
+                                        type="submit"
+                                        onClick={(e) => {
+                                            if (!confirm('⚠️ ¿Estás seguro de que deseas guardar estos cambios en la configuración?')) {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                        className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded transition"
+                                    >
+                                        Guardar Cambios
+                                    </button>
                                 </form>
 
                                 <hr className="my-8 border-gray-200" />
