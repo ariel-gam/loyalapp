@@ -35,22 +35,32 @@ export default function LoginPage() {
                     throw error;
                 }
 
-                console.log("Sesión inciada:", data.user?.id);
+                if (data.user) {
+                    console.log("Sesión inciada:", data.user.id);
 
-                // Check if user has a store
-                console.log("Buscando tienda...");
-                const { data: stores, error: storeError } = await supabase.from('stores').select('slug').maybeSingle();
+                    // Check if user has a store
+                    console.log("Buscando tienda...");
+                    const { data: store, error: storeError } = await supabase
+                        .from('stores')
+                        .select('slug')
+                        .eq('owner_id', data.user.id)
+                        .maybeSingle();
 
-                if (storeError) console.error("Error buscando tienda:", storeError);
+                    if (storeError) {
+                        console.error("Error buscando tienda:", storeError);
+                        // Don't block login if store check fails, just go to setup safely or alert?
+                        // Better to fallback to setup if ambiguous
+                    }
 
-                if (stores) {
-                    console.log("Tienda encontrada -> /admin");
-                    router.push('/admin');
-                    router.refresh();
-                } else {
-                    console.log("Sin tienda -> /setup");
-                    router.push('/setup');
-                    router.refresh();
+                    if (store) {
+                        console.log("Tienda encontrada -> /admin");
+                        router.push('/admin');
+                        router.refresh();
+                    } else {
+                        console.log("Sin tienda -> /setup");
+                        router.push('/setup');
+                        router.refresh();
+                    }
                 }
             }
         } catch (err: any) {
