@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import { categories as staticCategories } from '@/data/products';
 import ProductCard from './ProductCard';
 import { Product } from '@/data/products';
@@ -16,16 +17,12 @@ export default function Catalog({ slug, initialProducts = [] }: CatalogProps) {
     const [loading, setLoading] = useState(!initialProducts.length);
 
     useEffect(() => {
-        // If we have initial products, we don't need to fetch on mount.
-        if (initialProducts.length > 0) {
-            setLoading(false);
-            return;
-        }
-
         let isMounted = true;
 
         async function fetchProducts() {
-            setLoading(true);
+            // Only set loading if we don't have products yet, to avoid visual flash on updates
+            if (products.length === 0) setLoading(true);
+
             try {
                 const res = await fetch(`/api/products?slug=${slug}`);
                 if (!res.ok) throw new Error('Failed to fetch');
@@ -40,10 +37,33 @@ export default function Catalog({ slug, initialProducts = [] }: CatalogProps) {
             }
         }
 
-        fetchProducts();
+        // Fetch initially if needed or if just mounted
+        if (products.length === 0) {
+            fetchProducts();
+        } else if (initialProducts.length > 0 && products.length === initialProducts.length) {
+            // If we have initial products passed in props and state matches, we might not need to fetch, 
+            // BUT we still need to set loading=false if it was true.
+            setLoading(false);
+        }
 
-        return () => { isMounted = false; };
-    }, [slug]); // Remove initialProducts from dependency to prevent loops if parent keeps passing new empty arrays
+        // Realtime Subscription
+        console.log("Subscribing to products changes...");
+        const channel = supabase.channel('realtime-products')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'products' },
+                (payload) => {
+                    console.log('Realtime update:', payload);
+                    fetchProducts();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            isMounted = false;
+            supabase.removeChannel(channel);
+        };
+    }, [slug]); // Keep dependency stable. Passively uses products length ref optimization internally or re-fetches.
 
     // Also filter out unavailable products
     const filteredProducts = products.filter(

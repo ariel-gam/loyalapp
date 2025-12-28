@@ -553,6 +553,7 @@ export default function AdminPage() {
                     <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
                         <h3 className="text-xl font-bold mb-4">{editingProduct ? 'Editar' : 'Nuevo'}</h3>
                         <form action={async (formData) => {
+                            if (!confirm('⚠️ ¿Estás seguro de que deseas guardar este producto?')) return;
                             if (editingProduct) await updateProduct(editingProduct.id, formData);
                             else await createProduct(formData);
                             setIsModalOpen(false);
