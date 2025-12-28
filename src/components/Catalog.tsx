@@ -16,10 +16,13 @@ export default function Catalog({ slug, initialProducts = [] }: CatalogProps) {
     const [loading, setLoading] = useState(!initialProducts.length);
 
     useEffect(() => {
+        // If we have initial products, we don't need to fetch on mount.
         if (initialProducts.length > 0) {
             setLoading(false);
             return;
         }
+
+        let isMounted = true;
 
         async function fetchProducts() {
             setLoading(true);
@@ -27,15 +30,20 @@ export default function Catalog({ slug, initialProducts = [] }: CatalogProps) {
                 const res = await fetch(`/api/products?slug=${slug}`);
                 if (!res.ok) throw new Error('Failed to fetch');
                 const data = await res.json();
-                setProducts(data.products || []);
+                if (isMounted) {
+                    setProducts(data.products || []);
+                }
             } catch (error) {
                 console.error("Catalog load error", error);
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         }
+
         fetchProducts();
-    }, [slug, initialProducts]);
+
+        return () => { isMounted = false; };
+    }, [slug]); // Remove initialProducts from dependency to prevent loops if parent keeps passing new empty arrays
 
     // Also filter out unavailable products
     const filteredProducts = products.filter(
