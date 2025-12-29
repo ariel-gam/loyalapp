@@ -31,12 +31,9 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
     // Protect /admin routes
     if (request.nextUrl.pathname.startsWith('/admin')) {
+        const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
             return NextResponse.redirect(new URL('/login', request.url))
         }
@@ -44,9 +41,22 @@ export async function middleware(request: NextRequest) {
 
     // Protect /setup route
     if (request.nextUrl.pathname.startsWith('/setup')) {
+        const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
             return NextResponse.redirect(new URL('/login', request.url))
         }
+    }
+
+    // Optional: Refresh session for other routes if cookie exists
+    // This is important because the session token rotates.
+    // However, we only need to "wait" for it if we are actually using the user object.
+    // The createServerClient's `setAll` cookie logic happens inside `getUser` (it calls internal methods).
+    // So we should call it if we suspect a user is logged in.
+
+    // Check if we have a supabase cookie coming in
+    const hasSupabaseCookie = request.cookies.getAll().some(c => c.name.includes('sb-'));
+    if (hasSupabaseCookie && !request.nextUrl.pathname.startsWith('/admin') && !request.nextUrl.pathname.startsWith('/setup')) {
+        await supabase.auth.getUser()
     }
 
     return response
@@ -54,6 +64,15 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        /*
+         * Match all request paths except for the ones starting with:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * - manifest.json (PWA manifest)
+         * - sw.js (Service Worker)
+         * - images folders etc
+         */
+        '/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|workbox-.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }
