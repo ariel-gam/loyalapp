@@ -7,6 +7,7 @@ import { getStoreSettings, updateStoreSettings } from '@/actions/settingsActions
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import { uploadProductImage } from '@/utils/uploadImage';
+import InstallAppButton from '@/components/InstallAppButton';
 
 export default function AdminPage() {
     const router = useRouter();
@@ -199,6 +200,9 @@ export default function AdminPage() {
                                 >
                                     📋 Copiar
                                 </button>
+                            </div>
+                            <div className="ml-2">
+                                <InstallAppButton />
                             </div>
                         </div>
                     )}
