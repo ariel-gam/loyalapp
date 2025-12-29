@@ -34,7 +34,7 @@ export default function LoginPage() {
                 });
                 if (error) throw error;
                 setLoading(false);
-                alert('¡Registro exitoso! Por favor inicia sesión.');
+                alert('¡Registro exitoso! Te hemos enviado un correo para confirmar tu cuenta. Por favor revisa tu bandeja de entrada (y spam) antes de iniciar sesión.');
                 setIsRegister(false);
             } else {
                 console.log("Iniciando sesión con:", email);
@@ -71,7 +71,11 @@ export default function LoginPage() {
             }
         } catch (err: any) {
             console.error("Catch Error:", err);
-            alert(err.message || 'Error de autenticación');
+            if (err.message && err.message.includes('Invalid login credentials')) {
+                alert('Error de acceso. Si te acabas de registrar, asegúrate de haber confirmado tu email. Si ya lo hiciste, verifica tu contraseña.');
+            } else {
+                alert(err.message || 'Error de autenticación');
+            }
         } finally {
             setLoading(false);
         }
