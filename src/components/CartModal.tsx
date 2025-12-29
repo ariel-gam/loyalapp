@@ -175,6 +175,9 @@ export default function CartModal({ store }: CartModalProps) {
                                             </option>
                                         ))}
                                     </select>
+                                    <p className="text-xs text-orange-800 mt-2 opacity-90 leading-tight font-medium">
+                                        ⚠️ Si la zona seleccionada no coincide con la dirección de entrega, el comercio podrá ajustar el precio o cancelar el pedido.
+                                    </p>
                                 </div>
                             )}
 
