@@ -46,24 +46,10 @@ export default function Catalog({ slug, initialProducts = [] }: CatalogProps) {
             setLoading(false);
         }
 
-        // Realtime Subscription
-        console.log("Subscribing to products changes...");
-        const channel = supabase.channel('realtime-products')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'products' },
-                (payload) => {
-                    console.log('Realtime update:', payload);
-                    fetchProducts();
-                }
-            )
-            .subscribe();
-
         return () => {
             isMounted = false;
-            supabase.removeChannel(channel);
         };
-    }, [slug]); // Keep dependency stable. Passively uses products length ref optimization internally or re-fetches.
+    }, [slug]);
 
     // Also filter out unavailable products
     const filteredProducts = products.filter(

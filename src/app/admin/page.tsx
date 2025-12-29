@@ -15,6 +15,7 @@ export default function AdminPage() {
 
     // Store Info
     const [storeInfo, setStoreInfo] = useState<any>(null);
+    const [storeNotFound, setStoreNotFound] = useState(false);
 
     // Data State
     const [orders, setOrders] = useState<any[]>([]);
@@ -73,7 +74,7 @@ export default function AdminPage() {
             try {
                 const info = await getStoreSettings();
                 if (!info) {
-                    router.push('/setup'); // No store? Go setup
+                    setStoreNotFound(true);
                     return;
                 }
                 setStoreInfo(info);
@@ -174,7 +175,28 @@ export default function AdminPage() {
         ? customers.filter((c) => c.daysSinceLastOrder > 20)
         : customers;
 
-    if (!storeInfo && loading) return <div className="min-h-screen flex items-center justify-center">Cargando Panel...</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center">Cargando Panel...</div>;
+
+    if (storeNotFound) return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">No se encontró tu tienda</h2>
+            <p className="text-gray-600 mb-6">Parece que no tienes una tienda configurada o hubo un error cargándola.</p>
+            <div className="flex gap-4">
+                <button
+                    onClick={() => window.location.reload()}
+                    className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition"
+                >
+                    Reintentar
+                </button>
+                <button
+                    onClick={() => router.push('/setup')}
+                    className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition"
+                >
+                    Crear Tienda
+                </button>
+            </div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-gray-50">
