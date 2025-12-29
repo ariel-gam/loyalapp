@@ -33,6 +33,7 @@ export default function LoginPage() {
                     options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.loyalapp.com.ar'}/auth/callback` }
                 });
                 if (error) throw error;
+                setLoading(false);
                 alert('¡Registro exitoso! Por favor inicia sesión.');
                 setIsRegister(false);
             } else {
