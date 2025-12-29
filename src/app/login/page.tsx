@@ -62,12 +62,10 @@ export default function LoginPage() {
 
                     if (store) {
                         console.log("Tienda encontrada -> /admin");
-                        router.push('/admin');
-                        router.refresh();
+                        window.location.href = '/admin';
                     } else {
                         console.log("Sin tienda -> /setup");
-                        router.push('/setup');
-                        router.refresh();
+                        window.location.href = '/setup';
                     }
                 }
             }
