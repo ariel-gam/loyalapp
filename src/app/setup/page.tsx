@@ -8,6 +8,7 @@ export default function SetupPage() {
     const router = useRouter();
     const [name, setName] = useState('');
     const [slug, setSlug] = useState('');
+    const [coupon, setCoupon] = useState('');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -36,8 +37,9 @@ export default function SetupPage() {
 
             const finalSlug = slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-');
 
+            const trialDays = coupon.trim().toUpperCase() === 'GRATIS30' ? 30 : 7;
             const trialEndsAt = new Date();
-            trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+            trialEndsAt.setDate(trialEndsAt.getDate() + trialDays);
 
             const { error } = await supabase.from('stores').insert({
                 owner_id: user.id,
@@ -110,6 +112,16 @@ export default function SetupPage() {
                                 />
                             </div>
                             <p className="mt-2 text-xs text-gray-500">Este será el link que compartirás con tus clientes.</p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Código Promocional (Opcional)</label>
+                            <input
+                                value={coupon}
+                                onChange={(e) => setCoupon(e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm outline-none focus:ring-orange-500 focus:border-orange-500"
+                                placeholder="Si tienes un código, ingrésalo aquí"
+                            />
                         </div>
 
                         <div>

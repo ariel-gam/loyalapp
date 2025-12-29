@@ -207,345 +207,389 @@ export default function AdminPage() {
             )}
 
             {/* Content */}
-            <main className="max-w-7xl mx-auto p-6">
-                {loading && activeTab !== 'orders' ? ( // Don't show global loading for orders as we have realtime
-                    <div className="py-20 text-center text-gray-500">Cargando datos...</div>
-                ) : (
-                    <>
-                        {activeTab === 'orders' && (
-                            <div className="space-y-6">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-2xl font-bold text-gray-800">Pedidos Recientes</h2>
-                                    {orders.length > 0 && (
+            {storeInfo?.trial_ends_at && new Date(storeInfo.trial_ends_at) < new Date() ? (
+                <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl max-w-lg w-full border border-red-100">
+                        <div className="text-5xl mb-4">🔒</div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Periodo de Prueba Finalizado</h2>
+                        <p className="text-gray-600 mb-6">
+                            Tu prueba gratuita ha terminado. Para seguir gestionando tu negocio, activa tu plan mensual.
+                        </p>
+
+                        <div className="bg-gray-50 p-4 rounded-xl mb-6 text-left">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="font-bold text-gray-900">Plan Profesional</span>
+                                <span className="font-bold text-lg text-orange-600">$60.000</span>
+                            </div>
+                            <ul className="text-sm text-gray-500 space-y-1">
+                                <li>✅ Pedidos Ilimitados</li>
+                                <li>✅ Catálogo Digital QR</li>
+                                <li>✅ Panel de Control</li>
+                                <li>✅ Soporte Prioritario</li>
+                            </ul>
+                        </div>
+
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const { createSubscriptionPreference } = await import('@/actions/paymentActions');
+                                    const url = await createSubscriptionPreference();
+                                    window.location.href = url;
+                                } catch (e: any) {
+                                    alert("Error iniciando pago: " + e.message);
+                                }
+                            }}
+                            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl transition transform hover:scale-105 shadow-lg"
+                        >
+                            Pagar Suscripción
+                        </button>
+
+                        <p className="mt-6 text-xs text-gray-400">
+                            ¿Necesitas extender la prueba? <a href="https://wa.me/5491112345678" className="underline hover:text-orange-600">Contáctanos</a>
+                        </p>
+                    </div>
+                </div>
+            ) : (
+                <main className="max-w-7xl mx-auto p-6">
+                    {loading && activeTab !== 'orders' ? ( // Don't show global loading for orders as we have realtime
+                        <div className="py-20 text-center text-gray-500">Cargando datos...</div>
+                    ) : (
+                        <>
+                            {activeTab === 'orders' && (
+                                <div className="space-y-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-2xl font-bold text-gray-800">Pedidos Recientes</h2>
+                                        {orders.length > 0 && (
+                                            <button
+                                                onClick={() => {
+                                                    setConfirmation({
+                                                        message: '⚠️ ¿Limpiar pedidos recientes? (Se archivarán)',
+                                                        onConfirm: async () => {
+                                                            await clearAllOrders();
+                                                            loadData();
+                                                        }
+                                                    });
+                                                }}
+                                                className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-3 py-1 rounded hover:bg-red-50 transition"
+                                            >
+                                                🗑 Limpiar Todo
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="grid gap-4">
+                                        {orders.map((order) => (
+                                            <div key={order.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between gap-4">
+                                                <div>
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <span className="font-bold text-lg text-gray-900">{order.customers?.name || 'Cliente'}</span>
+                                                        <span className="text-sm text-gray-500 px-2 py-1 bg-gray-100 rounded-full">
+                                                            {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString()}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-sm text-gray-500 mb-2">
+                                                        {Array.isArray(order.details) && order.details.map((item: any, idx: number) => (
+                                                            <div key={idx} className="flex gap-1">
+                                                                <span>{item.quantity}x</span>
+                                                                <span>{item.product.name}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <p className="text-gray-600 mb-1 flex items-center gap-1">
+                                                        📞 {order.customers?.phone}
+                                                        <a href={`https://wa.me/${order.customers?.phone}`} target="_blank" className="text-green-600 hover:underline text-xs ml-2">Chat</a>
+                                                    </p>
+                                                    <p className="text-gray-600 mb-2">{order.delivery_method === 'delivery' ? `🛵 Envío a: ${order.delivery_address}` : '🏃 Retiro en Local'}</p>
+                                                </div>
+                                                <div className="flex flex-col items-end justify-center gap-2">
+                                                    <span className="text-2xl font-bold text-green-600">${order.total_amount?.toLocaleString('es-AR')}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        {order.delivery_method === 'delivery' && (
+                                                            <a
+                                                                href={`https://wa.me/${order.customers?.phone}?text=${encodeURIComponent(`Hola ${order.customers?.name || ''}, ¡tu pedido salió en camino! 🛵🍕`)}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition flex items-center gap-1 shadow-sm no-underline"
+                                                            >
+                                                                🛵 Avisar salida
+                                                            </a>
+                                                        )}
+                                                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${order.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                            {order.status === 'paid' ? 'Pagado' : 'Pendiente'}
+                                                        </span>
+                                                        {order.status !== 'paid' && (
+                                                            <button
+                                                                onClick={async () => {
+                                                                    await updateOrderStatus(order.id, 'paid');
+                                                                    loadData();
+                                                                }}
+                                                                className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition"
+                                                            >
+                                                                ✔ Cobrar
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {orders.length === 0 && <p className="text-gray-500 text-center py-10">Esperando pedidos...</p>}
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'products' && (
+                                <div>
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h2 className="text-2xl font-bold text-gray-800">Mis Productos</h2>
+                                        <button onClick={handleCreateNew} className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg shadow-sm font-medium transition">+ Nuevo Producto</button>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {products.map((product) => (
+                                            <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative group">
+                                                <div className="h-48 relative bg-gray-100">
+                                                    {product.image_url && <Image src={product.image_url} alt={product.name} fill className="object-cover" />}
+                                                </div>
+                                                <div className="p-4">
+                                                    <h3 className="font-bold text-gray-900">{product.name}</h3>
+                                                    <p className="text-sm text-gray-500 mb-2 capitalize">{product.category_id.replace('-', ' ')}</p>
+                                                    <div className="flex justify-between items-center mb-3">
+                                                        <span className="font-bold text-lg">${product.base_price?.toLocaleString('es-AR')}</span>
+                                                        <button onClick={() => handleToggle(product.id, product.is_available)} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${product.is_available !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
+                                                            {product.is_available !== false ? 'Disponible' : 'Agotado'}
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex gap-2 pt-2 border-t border-gray-100">
+                                                        <button onClick={() => handleEditProduct(product)} className="flex-1 bg-blue-50 text-blue-600 text-sm font-medium py-1.5 rounded hover:bg-blue-100 transition flex items-center justify-center gap-1">
+                                                            ✏️ Editar
+                                                        </button>
+                                                        <button onClick={() => handleDeleteProduct(product.id)} className="flex-1 bg-red-50 text-red-600 text-sm font-medium py-1.5 rounded hover:bg-red-100 transition flex items-center justify-center gap-1">
+                                                            🗑 Eliminar
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'customers' && (
+                                <div>
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h2 className="text-2xl font-bold text-gray-800">Clientes ({customers.length})</h2>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    setConfirmation({
+                                                        message: '⚠️ ¿Borrar TODOS los clientes? Esta acción es irreversible.',
+                                                        onConfirm: async () => {
+                                                            await clearAllCustomers();
+                                                            loadData();
+                                                        }
+                                                    });
+                                                }}
+                                                className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-3 py-1 rounded hover:bg-red-50 mr-2 transition"
+                                            >
+                                                🗑 Limpiar Todo
+                                            </button>
+                                            <button
+                                                onClick={() => setShowInactiveOnly(!showInactiveOnly)}
+                                                className={`px-3 py-1 rounded-full text-sm font-medium transition ${showInactiveOnly ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                            >
+                                                {showInactiveOnly ? 'Mostrando Inactivos' : 'Mostrar Inactivos'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                        {/* Simple list or table */}
+                                        {filteredCustomers.map(c => {
+                                            const isInactive = c.daysSinceLastOrder > 20;
+                                            const message = isInactive
+                                                ? `Hola ${c.name}, ¡te extrañamos! 🏃‍♂️💨\n\nHace mucho que no pasas por aquí. Te dejamos un descuento especial para hoy 🎁.\n\nPide aquí: ${typeof window !== 'undefined' ? window.location.origin : ''}/${storeInfo.slug}`
+                                                : `Hola ${c.name}, ¡gracias por elegirnos siempre! 🍕`;
+
+                                            return (
+                                                <div key={c.id} className="p-4 border-b border-gray-100 hover:bg-gray-50 flex justify-between items-center group">
+                                                    <div>
+                                                        <p className="font-bold text-gray-900 flex items-center gap-2">
+                                                            {c.name}
+                                                            <a
+                                                                href={`https://wa.me/${c.phone}?text=${encodeURIComponent(message)}`}
+                                                                target="_blank"
+                                                                className="bg-green-100 text-green-700 p-1.5 rounded-full hover:bg-green-200 transition-colors"
+                                                                title={isInactive ? "Enviar promo de recuperación" : "Enviar mensaje"}
+                                                            >
+                                                                💬
+                                                            </a>
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">{c.phone}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="font-bold text-sm">${c.totalSpent.toLocaleString('es-AR')}</p>
+                                                        <p className="text-xs text-gray-500">{c.totalOrders} pedidos</p>
+                                                        <p className={`text-xs ${isInactive ? 'text-red-500 font-bold' : 'text-green-600'}`}>
+                                                            Hace {c.daysSinceLastOrder} días
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'stats' && (
+                                <div>
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h2 className="text-2xl font-bold text-gray-800">Estadísticas</h2>
                                         <button
                                             onClick={() => {
                                                 setConfirmation({
-                                                    message: '⚠️ ¿Limpiar pedidos recientes? (Se archivarán)',
+                                                    message: '⚠️ ¿Borrar todas las estadísticas? Esto reiniciará el historial de ventas pero NO borrará los pedidos ni clientes.',
                                                     onConfirm: async () => {
-                                                        await clearAllOrders();
+                                                        await resetAllStats();
                                                         loadData();
                                                     }
                                                 });
                                             }}
                                             className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-3 py-1 rounded hover:bg-red-50 transition"
                                         >
-                                            🗑 Limpiar Todo
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="grid gap-4">
-                                    {orders.map((order) => (
-                                        <div key={order.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between gap-4">
-                                            <div>
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <span className="font-bold text-lg text-gray-900">{order.customers?.name || 'Cliente'}</span>
-                                                    <span className="text-sm text-gray-500 px-2 py-1 bg-gray-100 rounded-full">
-                                                        {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString()}
-                                                    </span>
-                                                </div>
-                                                <div className="text-sm text-gray-500 mb-2">
-                                                    {Array.isArray(order.details) && order.details.map((item: any, idx: number) => (
-                                                        <div key={idx} className="flex gap-1">
-                                                            <span>{item.quantity}x</span>
-                                                            <span>{item.product.name}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                <p className="text-gray-600 mb-1 flex items-center gap-1">
-                                                    📞 {order.customers?.phone}
-                                                    <a href={`https://wa.me/${order.customers?.phone}`} target="_blank" className="text-green-600 hover:underline text-xs ml-2">Chat</a>
-                                                </p>
-                                                <p className="text-gray-600 mb-2">{order.delivery_method === 'delivery' ? `🛵 Envío a: ${order.delivery_address}` : '🏃 Retiro en Local'}</p>
-                                            </div>
-                                            <div className="flex flex-col items-end justify-center gap-2">
-                                                <span className="text-2xl font-bold text-green-600">${order.total_amount?.toLocaleString('es-AR')}</span>
-                                                <div className="flex items-center gap-2">
-                                                    {order.delivery_method === 'delivery' && (
-                                                        <a
-                                                            href={`https://wa.me/${order.customers?.phone}?text=${encodeURIComponent(`Hola ${order.customers?.name || ''}, ¡tu pedido salió en camino! 🛵🍕`)}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition flex items-center gap-1 shadow-sm no-underline"
-                                                        >
-                                                            🛵 Avisar salida
-                                                        </a>
-                                                    )}
-                                                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${order.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                        {order.status === 'paid' ? 'Pagado' : 'Pendiente'}
-                                                    </span>
-                                                    {order.status !== 'paid' && (
-                                                        <button
-                                                            onClick={async () => {
-                                                                await updateOrderStatus(order.id, 'paid');
-                                                                loadData();
-                                                            }}
-                                                            className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition"
-                                                        >
-                                                            ✔ Cobrar
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {orders.length === 0 && <p className="text-gray-500 text-center py-10">Esperando pedidos...</p>}
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'products' && (
-                            <div>
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-2xl font-bold text-gray-800">Mis Productos</h2>
-                                    <button onClick={handleCreateNew} className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg shadow-sm font-medium transition">+ Nuevo Producto</button>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {products.map((product) => (
-                                        <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative group">
-                                            <div className="h-48 relative bg-gray-100">
-                                                {product.image_url && <Image src={product.image_url} alt={product.name} fill className="object-cover" />}
-                                            </div>
-                                            <div className="p-4">
-                                                <h3 className="font-bold text-gray-900">{product.name}</h3>
-                                                <p className="text-sm text-gray-500 mb-2 capitalize">{product.category_id.replace('-', ' ')}</p>
-                                                <div className="flex justify-between items-center mb-3">
-                                                    <span className="font-bold text-lg">${product.base_price?.toLocaleString('es-AR')}</span>
-                                                    <button onClick={() => handleToggle(product.id, product.is_available)} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${product.is_available !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
-                                                        {product.is_available !== false ? 'Disponible' : 'Agotado'}
-                                                    </button>
-                                                </div>
-                                                <div className="flex gap-2 pt-2 border-t border-gray-100">
-                                                    <button onClick={() => handleEditProduct(product)} className="flex-1 bg-blue-50 text-blue-600 text-sm font-medium py-1.5 rounded hover:bg-blue-100 transition flex items-center justify-center gap-1">
-                                                        ✏️ Editar
-                                                    </button>
-                                                    <button onClick={() => handleDeleteProduct(product.id)} className="flex-1 bg-red-50 text-red-600 text-sm font-medium py-1.5 rounded hover:bg-red-100 transition flex items-center justify-center gap-1">
-                                                        🗑 Eliminar
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'customers' && (
-                            <div>
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-2xl font-bold text-gray-800">Clientes ({customers.length})</h2>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => {
-                                                setConfirmation({
-                                                    message: '⚠️ ¿Borrar TODOS los clientes? Esta acción es irreversible.',
-                                                    onConfirm: async () => {
-                                                        await clearAllCustomers();
-                                                        loadData();
-                                                    }
-                                                });
-                                            }}
-                                            className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-3 py-1 rounded hover:bg-red-50 mr-2 transition"
-                                        >
-                                            🗑 Limpiar Todo
-                                        </button>
-                                        <button
-                                            onClick={() => setShowInactiveOnly(!showInactiveOnly)}
-                                            className={`px-3 py-1 rounded-full text-sm font-medium transition ${showInactiveOnly ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                                        >
-                                            {showInactiveOnly ? 'Mostrando Inactivos' : 'Mostrar Inactivos'}
+                                            📉 Limpiar Estadísticas
                                         </button>
                                     </div>
-                                </div>
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                                    {/* Simple list or table */}
-                                    {filteredCustomers.map(c => {
-                                        const isInactive = c.daysSinceLastOrder > 20;
-                                        const message = isInactive
-                                            ? `Hola ${c.name}, ¡te extrañamos! 🏃‍♂️💨\n\nHace mucho que no pasas por aquí. Te dejamos un descuento especial para hoy 🎁.\n\nPide aquí: ${typeof window !== 'undefined' ? window.location.origin : ''}/${storeInfo.slug}`
-                                            : `Hola ${c.name}, ¡gracias por elegirnos siempre! 🍕`;
-
-                                        return (
-                                            <div key={c.id} className="p-4 border-b border-gray-100 hover:bg-gray-50 flex justify-between items-center group">
-                                                <div>
-                                                    <p className="font-bold text-gray-900 flex items-center gap-2">
-                                                        {c.name}
-                                                        <a
-                                                            href={`https://wa.me/${c.phone}?text=${encodeURIComponent(message)}`}
-                                                            target="_blank"
-                                                            className="bg-green-100 text-green-700 p-1.5 rounded-full hover:bg-green-200 transition-colors"
-                                                            title={isInactive ? "Enviar promo de recuperación" : "Enviar mensaje"}
-                                                        >
-                                                            💬
-                                                        </a>
-                                                    </p>
-                                                    <p className="text-sm text-gray-500">{c.phone}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="font-bold text-sm">${c.totalSpent.toLocaleString('es-AR')}</p>
-                                                    <p className="text-xs text-gray-500">{c.totalOrders} pedidos</p>
-                                                    <p className={`text-xs ${isInactive ? 'text-red-500 font-bold' : 'text-green-600'}`}>
-                                                        Hace {c.daysSinceLastOrder} días
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'stats' && (
-                            <div>
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-2xl font-bold text-gray-800">Estadísticas</h2>
-                                    <button
-                                        onClick={() => {
-                                            setConfirmation({
-                                                message: '⚠️ ¿Borrar todas las estadísticas? Esto reiniciará el historial de ventas pero NO borrará los pedidos ni clientes.',
-                                                onConfirm: async () => {
-                                                    await resetAllStats();
-                                                    loadData();
-                                                }
-                                            });
-                                        }}
-                                        className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-3 py-1 rounded hover:bg-red-50 transition"
-                                    >
-                                        📉 Limpiar Estadísticas
-                                    </button>
-                                </div>
-                                {/* Simple Stats View */}
-                                <div className="flex gap-2 mb-4">
-                                    {[
-                                        { id: 'day', label: 'Día' },
-                                        { id: 'week', label: 'Semana' },
-                                        { id: 'month', label: 'Mes' }
-                                    ].map((p) => (
-                                        <button key={p.id} onClick={() => setRankingPeriod(p.id as any)} className={`px-3 py-1 rounded capitalize ${rankingPeriod === p.id ? 'bg-orange-500 text-white' : 'bg-gray-200'}`}>{p.label}</button>
-                                    ))}
-                                </div>
-                                <div className="bg-white p-6 rounded-xl shadow-sm">
-                                    <h3 className="text-lg font-bold mb-4">Ranking de Ventas</h3>
-                                    <ul>
-                                        {ranking.map((item, idx) => (
-                                            <li key={idx} className="flex justify-between py-2 border-b border-gray-100 last:border-0">
-                                                <span>{item.quantity}x {item.name}</span>
-                                                <span className="font-bold">${item.revenue.toLocaleString('es-AR')}</span>
-                                            </li>
+                                    {/* Simple Stats View */}
+                                    <div className="flex gap-2 mb-4">
+                                        {[
+                                            { id: 'day', label: 'Día' },
+                                            { id: 'week', label: 'Semana' },
+                                            { id: 'month', label: 'Mes' }
+                                        ].map((p) => (
+                                            <button key={p.id} onClick={() => setRankingPeriod(p.id as any)} className={`px-3 py-1 rounded capitalize ${rankingPeriod === p.id ? 'bg-orange-500 text-white' : 'bg-gray-200'}`}>{p.label}</button>
                                         ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'settings' && storeInfo && (
-                            <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-                                <h2 className="text-2xl font-bold text-gray-800 mb-6">Configuración</h2>
-                                <form action={async (formData) => {
-                                    const newSettings = {
-                                        store_name: formData.get('store_name'),
-                                        address: formData.get('address'),
-                                        phone: formData.get('phone'),
-                                        logo_url: formData.get('logo_url'),
-                                        primary_color: formData.get('primary_color'),
-                                    };
-                                    const res = await updateStoreSettings(newSettings);
-                                    if (res.success) alert('Guardado!');
-                                    else alert(res.message);
-                                }} className="space-y-4">
-                                    <div><label className="text-sm font-bold">Nombre</label><input name="store_name" defaultValue={storeInfo.store_name} className="w-full border p-2 rounded" /></div>
-                                    <div><label className="text-sm font-bold">Dirección</label><input name="address" defaultValue={storeInfo.address} className="w-full border p-2 rounded" /></div>
-                                    <div><label className="text-sm font-bold">Teléfono/WhatsApp</label><input name="phone" defaultValue={storeInfo.phone} className="w-full border p-2 rounded" /></div>
-
-                                    <div>
-                                        <label className="text-sm font-bold block mb-1">Logo URL</label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                name="logo_url"
-                                                defaultValue={storeInfo.logo_url}
-                                                className="flex-1 border p-2 rounded"
-                                                id="logo-input" // Add ID to target with JS if needed, though we use defaultValue here. 
-                                            // Actually, for consistency with the other form, let's use controlled component ONLY if we want immediate preview update.
-                                            // But since the original form uses uncontrolled inputs (formData), we can just update the input's value using ref or direct manipulation? 
-                                            // Easier: Modify the form to be controlled? No, keep it uncontrolled but use state for the image URL input to support the upload button filling it.
-                                            // Let's use a small local component or just useState inside the map.
-                                            // Since we are inside the main AdminPage component, we can add a new state for logoUrl.
-                                            />
-                                            <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded flex items-center gap-2 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                                <span className="text-xl">📷</span>
-                                                <span className="text-sm font-medium">{uploading ? '...' : 'Subir'}</span>
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    className="hidden"
-                                                    disabled={uploading}
-                                                    onChange={async (e) => {
-                                                        if (e.target.files && e.target.files[0]) {
-                                                            setUploading(true);
-                                                            try {
-                                                                const url = await uploadProductImage(e.target.files[0]);
-                                                                // Update the input value directly since it is uncontrolled for now, or better, force a re-render.
-                                                                // Simplest way for this specific form:
-                                                                const input = document.querySelector('input[name="logo_url"]') as HTMLInputElement;
-                                                                if (input) input.value = url;
-                                                            } catch (err) {
-                                                                alert('Error subiendo imagen: ' + (err as any).message);
-                                                            } finally {
-                                                                setUploading(false);
-                                                            }
-                                                        }
-                                                    }}
-                                                />
-                                            </label>
-                                        </div>
                                     </div>
+                                    <div className="bg-white p-6 rounded-xl shadow-sm">
+                                        <h3 className="text-lg font-bold mb-4">Ranking de Ventas</h3>
+                                        <ul>
+                                            {ranking.map((item, idx) => (
+                                                <li key={idx} className="flex justify-between py-2 border-b border-gray-100 last:border-0">
+                                                    <span>{item.quantity}x {item.name}</span>
+                                                    <span className="font-bold">${item.revenue.toLocaleString('es-AR')}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
 
-                                    <div><label className="text-sm font-bold">Color</label><input name="primary_color" type="color" defaultValue={storeInfo.primary_color || '#f97316'} className="h-10 w-full" /></div>
-                                    <button
-                                        type="submit"
-                                        onClick={(e) => {
-                                            if (!confirm('⚠️ ¿Estás seguro de que deseas guardar estos cambios en la configuración?')) {
-                                                e.preventDefault();
-                                            }
-                                        }}
-                                        className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded transition"
-                                    >
-                                        Guardar Cambios
-                                    </button>
-                                </form>
+                            {activeTab === 'settings' && storeInfo && (
+                                <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+                                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Configuración</h2>
+                                    <form action={async (formData) => {
+                                        const newSettings = {
+                                            store_name: formData.get('store_name'),
+                                            address: formData.get('address'),
+                                            phone: formData.get('phone'),
+                                            logo_url: formData.get('logo_url'),
+                                            primary_color: formData.get('primary_color'),
+                                        };
+                                        const res = await updateStoreSettings(newSettings);
+                                        if (res.success) alert('Guardado!');
+                                        else alert(res.message);
+                                    }} className="space-y-4">
+                                        <div><label className="text-sm font-bold">Nombre</label><input name="store_name" defaultValue={storeInfo.store_name} className="w-full border p-2 rounded" /></div>
+                                        <div><label className="text-sm font-bold">Dirección</label><input name="address" defaultValue={storeInfo.address} className="w-full border p-2 rounded" /></div>
+                                        <div><label className="text-sm font-bold">Teléfono/WhatsApp</label><input name="phone" defaultValue={storeInfo.phone} className="w-full border p-2 rounded" /></div>
 
-                                <hr className="my-8 border-gray-200" />
-
-                                <div className="bg-orange-50 p-6 rounded-xl border border-orange-100">
-                                    <h3 className="text-lg font-bold text-gray-800 mb-2">Plan de Suscripción</h3>
-                                    <p className="text-gray-600 mb-4 text-sm">
-                                        Tu plan actual expira el: <strong>{storeInfo.trial_ends_at ? new Date(storeInfo.trial_ends_at).toLocaleDateString() : 'N/A'}</strong>
-                                    </p>
-                                    <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
                                         <div>
-                                            <p className="font-bold text-gray-900">Plan Mensual</p>
-                                            <p className="text-sm text-gray-500">$60.000 / mes</p>
+                                            <label className="text-sm font-bold block mb-1">Logo URL</label>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    name="logo_url"
+                                                    defaultValue={storeInfo.logo_url}
+                                                    className="flex-1 border p-2 rounded"
+                                                    id="logo-input" // Add ID to target with JS if needed, though we use defaultValue here. 
+                                                // Actually, for consistency with the other form, let's use controlled component ONLY if we want immediate preview update.
+                                                // But since the original form uses uncontrolled inputs (formData), we can just update the input's value using ref or direct manipulation? 
+                                                // Easier: Modify the form to be controlled? No, keep it uncontrolled but use state for the image URL input to support the upload button filling it.
+                                                // Let's use a small local component or just useState inside the map.
+                                                // Since we are inside the main AdminPage component, we can add a new state for logoUrl.
+                                                />
+                                                <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded flex items-center gap-2 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                                    <span className="text-xl">📷</span>
+                                                    <span className="text-sm font-medium">{uploading ? '...' : 'Subir'}</span>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        disabled={uploading}
+                                                        onChange={async (e) => {
+                                                            if (e.target.files && e.target.files[0]) {
+                                                                setUploading(true);
+                                                                try {
+                                                                    const url = await uploadProductImage(e.target.files[0]);
+                                                                    // Update the input value directly since it is uncontrolled for now, or better, force a re-render.
+                                                                    // Simplest way for this specific form:
+                                                                    const input = document.querySelector('input[name="logo_url"]') as HTMLInputElement;
+                                                                    if (input) input.value = url;
+                                                                } catch (err) {
+                                                                    alert('Error subiendo imagen: ' + (err as any).message);
+                                                                } finally {
+                                                                    setUploading(false);
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
+                                                </label>
+                                            </div>
                                         </div>
+
+                                        <div><label className="text-sm font-bold">Color</label><input name="primary_color" type="color" defaultValue={storeInfo.primary_color || '#f97316'} className="h-10 w-full" /></div>
                                         <button
-                                            onClick={async () => {
-                                                try {
-                                                    const { createSubscriptionPreference } = await import('@/actions/paymentActions');
-                                                    const url = await createSubscriptionPreference();
-                                                    window.location.href = url;
-                                                } catch (e: any) {
-                                                    alert("Error iniciando pago: " + e.message);
+                                            type="submit"
+                                            onClick={(e) => {
+                                                if (!confirm('⚠️ ¿Estás seguro de que deseas guardar estos cambios en la configuración?')) {
+                                                    e.preventDefault();
                                                 }
                                             }}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition"
+                                            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded transition"
                                         >
-                                            Pagar Suscripción
+                                            Guardar Cambios
                                         </button>
+                                    </form>
+
+                                    <hr className="my-8 border-gray-200" />
+
+                                    <div className="bg-orange-50 p-6 rounded-xl border border-orange-100">
+                                        <h3 className="text-lg font-bold text-gray-800 mb-2">Plan de Suscripción</h3>
+                                        <p className="text-gray-600 mb-4 text-sm">
+                                            Tu plan actual expira el: <strong>{storeInfo.trial_ends_at ? new Date(storeInfo.trial_ends_at).toLocaleDateString() : 'N/A'}</strong>
+                                        </p>
+                                        <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
+                                            <div>
+                                                <p className="font-bold text-gray-900">Plan Mensual</p>
+                                                <p className="text-sm text-gray-500">$60.000 / mes</p>
+                                            </div>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const { createSubscriptionPreference } = await import('@/actions/paymentActions');
+                                                        const url = await createSubscriptionPreference();
+                                                        window.location.href = url;
+                                                    } catch (e: any) {
+                                                        alert("Error iniciando pago: " + e.message);
+                                                    }
+                                                }}
+                                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition"
+                                            >
+                                                Pagar Suscripción
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-                    </>
-                )}
-            </main>
+                            )}
+                        </>
+                    )}
+                </main>
+            )}
 
             {/* Modal for Product Edit */}
             {isModalOpen && (
