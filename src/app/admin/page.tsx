@@ -58,6 +58,9 @@ export default function AdminPage() {
     // Confirmation State
     const [confirmation, setConfirmation] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
+    // Delivery Zones State
+    const [deliveryZones, setDeliveryZones] = useState<{ id: string, name: string; price: number }[]>([]);
+
     // Image Upload State
     const [imageUrl, setImageUrl] = useState('');
     const [uploading, setUploading] = useState(false);
@@ -98,6 +101,9 @@ export default function AdminPage() {
                         closeTime: info.schedule.closeTime || '',
                         closedDates: Array.isArray(info.schedule.closedDates) ? info.schedule.closedDates : []
                     });
+                }
+                if (info.deliveryZones && Array.isArray(info.deliveryZones)) {
+                    setDeliveryZones(info.deliveryZones);
                 }
             } catch (err) {
                 console.error(err);
@@ -568,7 +574,8 @@ export default function AdminPage() {
                                             logo_url: formData.get('logo_url'),
                                             primary_color: formData.get('primary_color'),
                                             categories: categories,
-                                            schedule: schedule
+                                            schedule: schedule,
+                                            deliveryZones: deliveryZones
                                         };
 
                                         const res = await updateStoreSettings(newSettings);
@@ -698,6 +705,62 @@ export default function AdminPage() {
                                                     {schedule.closedDates.length === 0 && <span className="text-gray-400 text-xs italic">No hay fechas bloqueadas</span>}
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        {/* Delivery Zones Config */}
+                                        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                                            <h4 className="text-md font-bold text-orange-800 mb-4 flex items-center gap-2">
+                                                🛵 Zonas de Envío
+                                            </h4>
+
+                                            <div className="space-y-3 mb-4">
+                                                {deliveryZones.map((zone, idx) => (
+                                                    <div key={idx} className="flex gap-2 items-center bg-white p-2 rounded shadow-sm">
+                                                        <input
+                                                            placeholder="Nombre Zona (Ej: Centro)"
+                                                            value={zone.name}
+                                                            onChange={(e) => {
+                                                                const newZones = [...deliveryZones];
+                                                                newZones[idx].name = e.target.value;
+                                                                setDeliveryZones(newZones);
+                                                            }}
+                                                            className="flex-1 border p-1 rounded text-sm"
+                                                        />
+                                                        <span className="text-gray-500 font-bold">$</span>
+                                                        <input
+                                                            type="number"
+                                                            placeholder="Precio"
+                                                            value={zone.price}
+                                                            onChange={(e) => {
+                                                                const newZones = [...deliveryZones];
+                                                                newZones[idx].price = Number(e.target.value);
+                                                                setDeliveryZones(newZones);
+                                                            }}
+                                                            className="w-24 border p-1 rounded text-sm"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setDeliveryZones(deliveryZones.filter((_, i) => i !== idx))}
+                                                            className="text-red-500 hover:text-red-700 px-2 font-bold"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setDeliveryZones([...deliveryZones, { id: Date.now().toString(), name: '', price: 0 }])}
+                                                    className="bg-orange-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-orange-700 transition w-full"
+                                                >
+                                                    + Agregar Zona
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-orange-600 mt-2">
+                                                Si agregas zonas, el cliente deberá elegir una al pedir envío a domicilio y el costo se sumará automáticamente.
+                                            </p>
                                         </div>
 
                                         {/* Category Management */}

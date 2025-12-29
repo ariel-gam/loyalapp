@@ -11,6 +11,7 @@ interface SubmitOrderParams {
     totalPrice: number;
     deliveryMethod: 'delivery' | 'pickup';
     address?: string;
+    deliveryZone?: { name: string; price: number };
 }
 
 export async function submitOrder(data: SubmitOrderParams) {
@@ -45,7 +46,9 @@ export async function submitOrder(data: SubmitOrderParams) {
                 customer_id: customer.id,
                 total_amount: data.totalPrice,
                 delivery_method: data.deliveryMethod,
-                delivery_address: data.deliveryMethod === 'delivery' ? data.address : null,
+                delivery_address: data.deliveryMethod === 'delivery'
+                    ? `${data.address}${data.deliveryZone ? ` (${data.deliveryZone.name})` : ''}`
+                    : null,
                 details: data.items,
             });
 

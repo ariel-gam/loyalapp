@@ -15,7 +15,15 @@ export default function CartModal({ store }: CartModalProps) {
     const [phone, setPhone] = useState('');
     const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('delivery');
     const [address, setAddress] = useState('');
+    const [selectedZoneId, setSelectedZoneId] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const deliveryZones: { id: string; name: string; price: number }[] = store.deliveryZones || store.settings?.deliveryZones || [];
+    const selectedZone = deliveryZones.find(z => z.id === selectedZoneId);
+
+    // Calculate final total including delivery
+    const deliveryCost = (deliveryMethod === 'delivery' && selectedZone) ? selectedZone.price : 0;
+    const finalTotal = totalPrice + deliveryCost;
 
     if (!isCartOpen) return null;
 
@@ -30,9 +38,15 @@ export default function CartModal({ store }: CartModalProps) {
             alert('Por favor completa tu nombre y teléfono');
             return;
         }
-        if (deliveryMethod === 'delivery' && !address) {
-            alert('Por favor completa tu dirección de envío');
-            return;
+        if (deliveryMethod === 'delivery') {
+            if (!address) {
+                alert('Por favor completa tu dirección de envío');
+                return;
+            }
+            if (deliveryZones.length > 0 && !selectedZoneId) {
+                alert('Por favor selecciona una zona de envío para calcular el costo');
+                return;
+            }
         }
 
         const phoneClean = phone.replace(/\D/g, '');
@@ -44,9 +58,10 @@ export default function CartModal({ store }: CartModalProps) {
                 name,
                 phone: phoneClean,
                 items,
-                totalPrice,
                 deliveryMethod,
-                address
+                address,
+                deliveryZone: selectedZone ? { name: selectedZone.name, price: selectedZone.price } : undefined,
+                totalPrice: finalTotal // Save the total with delivery
             });
         } catch (err) {
             console.error("Error saving order:", err);
@@ -61,6 +76,9 @@ export default function CartModal({ store }: CartModalProps) {
 
         if (deliveryMethod === 'delivery') {
             message += `*Dirección:* ${address}%0A`;
+            if (selectedZone) {
+                message += `*Zona de Envío:* ${selectedZone.name} ($${selectedZone.price})%0A`;
+            }
         }
 
         message += `%0A*Detalle del Pedido:*%0A`;
@@ -69,7 +87,7 @@ export default function CartModal({ store }: CartModalProps) {
             message += `- ${item.quantity}x ${item.product.name} ($${(item.product.price * item.quantity).toLocaleString('es-AR')})%0A`;
         });
 
-        message += `%0A*TOTAL: $${totalPrice.toLocaleString('es-AR')}*`;
+        message += `%0A*TOTAL: $${finalTotal.toLocaleString('es-AR')}*`;
 
         if (deliveryMethod === 'pickup') {
             message += `%0A%0A_Retiro por: ${storeAddress}_`;
@@ -136,6 +154,29 @@ export default function CartModal({ store }: CartModalProps) {
                                     Retiro en Local 🏃
                                 </button>
                             </div>
+
+
+
+                            {/* Zone Selector (if configured) */}
+                            {deliveryMethod === 'delivery' && deliveryZones.length > 0 && (
+                                <div className="animate-fade-in bg-orange-50 p-3 rounded-xl border border-orange-100">
+                                    <label className="block text-sm font-bold text-orange-800 mb-2">
+                                        ¿En qué zona estás?
+                                    </label>
+                                    <select
+                                        value={selectedZoneId}
+                                        onChange={(e) => setSelectedZoneId(e.target.value)}
+                                        className="w-full p-2 border border-orange-200 rounded-lg bg-white text-gray-800 text-sm font-medium focus:ring-2 focus:ring-orange-500 outline-none"
+                                    >
+                                        <option value="">Seleccionar zona...</option>
+                                        {deliveryZones.map(zone => (
+                                            <option key={zone.id} value={zone.id}>
+                                                {zone.name} (+${zone.price})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
 
                             {/* Product List */}
                             <div className="space-y-4">
@@ -240,8 +281,8 @@ export default function CartModal({ store }: CartModalProps) {
                 {items.length > 0 && (
                     <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
                         <div className="flex justify-between items-center mb-4">
-                            <span className="text-gray-600">Total</span>
-                            <span className="text-2xl font-bold text-gray-900">${totalPrice.toLocaleString('es-AR')}</span>
+                            <span className="text-gray-600">Total {deliveryCost > 0 && <span className="text-xs text-orange-600">(Envío: +${deliveryCost})</span>}</span>
+                            <span className="text-2xl font-bold text-gray-900">${finalTotal.toLocaleString('es-AR')}</span>
                         </div>
                         <button
                             onClick={handleCheckout}
@@ -253,6 +294,6 @@ export default function CartModal({ store }: CartModalProps) {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }
