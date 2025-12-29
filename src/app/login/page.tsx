@@ -157,7 +157,7 @@ export default function LoginPage() {
                                     onClick={() => setIsRecovery(true)}
                                     className="text-sm font-medium text-orange-600 hover:text-orange-500"
                                 >
-                                    ¿Olvidaste tu contraseña?
+                                    Olvidé mi contraseña
                                 </button>
                             </div>
                         )}
