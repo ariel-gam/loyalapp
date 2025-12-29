@@ -35,6 +35,18 @@ export default function AdminPage() {
     const [imageUrl, setImageUrl] = useState('');
     const [uploading, setUploading] = useState(false);
 
+    // Password Reset State
+    const [showPasswordReset, setShowPasswordReset] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('reset_password') === 'true') {
+                setShowPasswordReset(true);
+            }
+        }
+    }, []);
+
     useEffect(() => {
         // Initial Data Load
         async function init() {
@@ -584,6 +596,40 @@ export default function AdminPage() {
                                             </button>
                                         </div>
                                     </div>
+
+
+                                    <hr className="my-8 border-gray-200" />
+
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-800 mb-4">Seguridad</h3>
+                                        <form onSubmit={async (e) => {
+                                            e.preventDefault();
+                                            const form = e.target as HTMLFormElement;
+                                            const password = (form.elements.namedItem('new_password') as HTMLInputElement).value;
+                                            if (password.length < 6) {
+                                                alert("La contraseña debe tener al menos 6 caracteres");
+                                                return;
+                                            }
+
+                                            setLoading(true);
+                                            const { error } = await supabase.auth.updateUser({ password: password });
+                                            setLoading(false);
+
+                                            if (error) alert("Error: " + error.message);
+                                            else {
+                                                alert("¡Contraseña actualizada correctamente!");
+                                                form.reset();
+                                            }
+                                        }} className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                                            <div className="mb-4">
+                                                <label className="block text-sm font-bold text-gray-700 mb-1">Nueva Contraseña</label>
+                                                <input name="new_password" type="password" placeholder="Mínimo 6 caracteres" className="w-full border p-2 rounded" required minLength={6} />
+                                            </div>
+                                            <button type="submit" className="bg-gray-800 text-white px-4 py-2 rounded text-sm font-medium hover:bg-gray-900 transition">
+                                                Actualizar Contraseña
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             )}
                         </>
@@ -592,108 +638,159 @@ export default function AdminPage() {
             )}
 
             {/* Modal for Product Edit */}
-            {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-                    <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-                        <h3 className="text-xl font-bold mb-4">{editingProduct ? 'Editar' : 'Nuevo'}</h3>
-                        <form action={async (formData) => {
-                            if (!confirm('⚠️ ¿Estás seguro de que deseas guardar este producto?')) return;
-                            if (editingProduct) await updateProduct(editingProduct.id, formData);
-                            else await createProduct(formData);
-                            setIsModalOpen(false);
-                            loadData();
-                        }} className="space-y-4">
-                            <input name="name" placeholder="Nombre" defaultValue={editingProduct?.name} required className="w-full border p-2 rounded" />
-                            <textarea name="description" placeholder="Descripción" defaultValue={editingProduct?.description} className="w-full border p-2 rounded" />
-                            <input name="price" type="number" placeholder="Precio" defaultValue={editingProduct?.base_price} required className="w-full border p-2 rounded" />
-                            <select name="categoryId" defaultValue={editingProduct?.category_id || 'pizzas'} className="w-full border p-2 rounded capitalize">
-                                <option value="pizzas">Pizzas</option>
-                                <option value="empanadas">Empanadas</option>
-                                <option value="hamburguesas">Hamburguesas</option>
-                                <option value="bebidas">Bebidas</option>
-                                <option value="sandwich-milanesa">Sandwich de Milanesas</option>
-                                <option value="sandwich-miga">Sandwich de Miga</option>
-                                <option value="papas-fritas">Papas Fritas</option>
-                                <option value="arrollados">Arrollados</option>
-                                <option value="postres">Postres</option>
-                            </select>
+            {
+                isModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+                        <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+                            <h3 className="text-xl font-bold mb-4">{editingProduct ? 'Editar' : 'Nuevo'}</h3>
+                            <form action={async (formData) => {
+                                if (!confirm('⚠️ ¿Estás seguro de que deseas guardar este producto?')) return;
+                                if (editingProduct) await updateProduct(editingProduct.id, formData);
+                                else await createProduct(formData);
+                                setIsModalOpen(false);
+                                loadData();
+                            }} className="space-y-4">
+                                <input name="name" placeholder="Nombre" defaultValue={editingProduct?.name} required className="w-full border p-2 rounded" />
+                                <textarea name="description" placeholder="Descripción" defaultValue={editingProduct?.description} className="w-full border p-2 rounded" />
+                                <input name="price" type="number" placeholder="Precio" defaultValue={editingProduct?.base_price} required className="w-full border p-2 rounded" />
+                                <select name="categoryId" defaultValue={editingProduct?.category_id || 'pizzas'} className="w-full border p-2 rounded capitalize">
+                                    <option value="pizzas">Pizzas</option>
+                                    <option value="empanadas">Empanadas</option>
+                                    <option value="hamburguesas">Hamburguesas</option>
+                                    <option value="bebidas">Bebidas</option>
+                                    <option value="sandwich-milanesa">Sandwich de Milanesas</option>
+                                    <option value="sandwich-miga">Sandwich de Miga</option>
+                                    <option value="papas-fritas">Papas Fritas</option>
+                                    <option value="arrollados">Arrollados</option>
+                                    <option value="postres">Postres</option>
+                                </select>
 
-                            <div className="space-y-2">
-                                <label className="block text-sm font-bold text-gray-700">Imagen</label>
-                                <div className="flex gap-2">
-                                    <input
-                                        name="image"
-                                        placeholder="URL Imagen"
-                                        value={imageUrl}
-                                        onChange={(e) => setImageUrl(e.target.value)}
-                                        className="flex-1 border p-2 rounded"
-                                    />
-                                    <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded flex items-center gap-2 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                        <span className="text-xl">📷</span>
-                                        <span className="text-sm font-medium">{uploading ? '...' : 'Subir'}</span>
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-bold text-gray-700">Imagen</label>
+                                    <div className="flex gap-2">
                                         <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            disabled={uploading}
-                                            onChange={async (e) => {
-                                                if (e.target.files && e.target.files[0]) {
-                                                    setUploading(true);
-                                                    try {
-                                                        const url = await uploadProductImage(e.target.files[0]);
-                                                        setImageUrl(url);
-                                                    } catch (err) {
-                                                        alert('Error subiendo imagen: ' + (err as any).message);
-                                                    } finally {
-                                                        setUploading(false);
-                                                    }
-                                                }
-                                            }}
+                                            name="image"
+                                            placeholder="URL Imagen"
+                                            value={imageUrl}
+                                            onChange={(e) => setImageUrl(e.target.value)}
+                                            className="flex-1 border p-2 rounded"
                                         />
-                                    </label>
-                                </div>
-                                {imageUrl && (
-                                    <div className="relative h-40 w-full bg-gray-100 rounded overflow-hidden border border-gray-200">
-                                        <Image src={imageUrl} alt="Preview" fill className="object-contain" />
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Discounts handling simplified for MVP */}
-                            <div className="bg-gray-50 p-2 rounded">
-                                <p className="text-xs font-bold mb-2">Descuentos Diarios (%)</p>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {[0, 1, 2, 3, 4, 5, 6].map(d => (
-                                        <div key={d}>
-                                            <span className="text-xs text-gray-500">{['D', 'L', 'M', 'X', 'J', 'V', 'S'][d]}</span>
+                                        <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded flex items-center gap-2 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                            <span className="text-xl">📷</span>
+                                            <span className="text-sm font-medium">{uploading ? '...' : 'Subir'}</span>
                                             <input
-                                                name={`discount_${d}`}
-                                                className="w-full text-xs border p-1 rounded"
-                                                defaultValue={editingProduct?.discounts?.find((x: any) => x.day_of_week === d)?.percent || ''}
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                disabled={uploading}
+                                                onChange={async (e) => {
+                                                    if (e.target.files && e.target.files[0]) {
+                                                        setUploading(true);
+                                                        try {
+                                                            const url = await uploadProductImage(e.target.files[0]);
+                                                            setImageUrl(url);
+                                                        } catch (err) {
+                                                            alert('Error subiendo imagen: ' + (err as any).message);
+                                                        } finally {
+                                                            setUploading(false);
+                                                        }
+                                                    }
+                                                }}
                                             />
+                                        </label>
+                                    </div>
+                                    {imageUrl && (
+                                        <div className="relative h-40 w-full bg-gray-100 rounded overflow-hidden border border-gray-200">
+                                            <Image src={imageUrl} alt="Preview" fill className="object-contain" />
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
-                            </div>
 
-                            <button className="w-full bg-orange-600 text-white font-bold py-2 rounded">Guardar</button>
-                            <button type="button" onClick={() => setIsModalOpen(false)} className="w-full text-gray-500 py-2">Cancelar</button>
-                        </form>
-                    </div>
-                </div>
-            )}
-            {/* Confirmation Modal */}
-            {confirmation && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
-                    <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl">
-                        <p className="mb-4 font-bold">{confirmation.message}</p>
-                        <div className="flex gap-2">
-                            <button onClick={() => setConfirmation(null)} className="flex-1 py-2 bg-gray-100 rounded">No</button>
-                            <button onClick={() => { confirmation.onConfirm(); setConfirmation(null); }} className="flex-1 py-2 bg-red-600 text-white rounded">Sí</button>
+                                {/* Discounts handling simplified for MVP */}
+                                <div className="bg-gray-50 p-2 rounded">
+                                    <p className="text-xs font-bold mb-2">Descuentos Diarios (%)</p>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {[0, 1, 2, 3, 4, 5, 6].map(d => (
+                                            <div key={d}>
+                                                <span className="text-xs text-gray-500">{['D', 'L', 'M', 'X', 'J', 'V', 'S'][d]}</span>
+                                                <input
+                                                    name={`discount_${d}`}
+                                                    className="w-full text-xs border p-1 rounded"
+                                                    defaultValue={editingProduct?.discounts?.find((x: any) => x.day_of_week === d)?.percent || ''}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button className="w-full bg-orange-600 text-white font-bold py-2 rounded">Guardar</button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="w-full text-gray-500 py-2">Cancelar</button>
+                            </form>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+
+            {/* Password Reset Modal */}
+            {
+                showPasswordReset && (
+                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <div className="bg-white rounded-xl max-w-md w-full p-8 shadow-2xl">
+                            <h3 className="text-2xl font-bold mb-4 text-center">🔐 Restablecer Contraseña</h3>
+                            <p className="text-gray-600 mb-6 text-center text-sm">
+                                Has iniciado sesión vía recuperación. Por favor establece una nueva contraseña para tu cuenta.
+                            </p>
+                            <form onSubmit={async (e) => {
+                                e.preventDefault();
+                                const form = e.target as HTMLFormElement;
+                                const password = (form.elements.namedItem('reset_new_password') as HTMLInputElement).value;
+
+                                if (password.length < 6) {
+                                    alert("Mínimo 6 caracteres");
+                                    return;
+                                }
+
+                                const { error } = await supabase.auth.updateUser({ password });
+
+                                if (error) {
+                                    alert("Error: " + error.message);
+                                } else {
+                                    alert("¡Contraseña establecida con éxito!");
+                                    setShowPasswordReset(false);
+                                    // Clean URL
+                                    router.push('/admin');
+                                }
+                            }} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Nueva Contraseña</label>
+                                    <input name="reset_new_password" type="password" placeholder="********" className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" required minLength={6} />
+                                </div>
+                                <button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg transition">
+                                    Guardar Nueva Contraseña
+                                </button>
+                                <button type="button" onClick={() => setShowPasswordReset(false)} className="w-full text-gray-500 text-sm py-2">
+                                    Cancelar / Hacerlo después
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Confirmation Modal */}
+            {
+                confirmation && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+                        <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl">
+                            <p className="mb-4 font-bold">{confirmation.message}</p>
+                            <div className="flex gap-2">
+                                <button onClick={() => setConfirmation(null)} className="flex-1 py-2 bg-gray-100 rounded">No</button>
+                                <button onClick={() => { confirmation.onConfirm(); setConfirmation(null); }} className="flex-1 py-2 bg-red-600 text-white rounded">Sí</button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 }
