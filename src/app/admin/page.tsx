@@ -245,7 +245,7 @@ export default function AdminPage() {
                         </button>
 
                         <p className="mt-6 text-xs text-gray-400">
-                            ¿Necesitas extender la prueba? <a href="https://wa.me/5491112345678" className="underline hover:text-orange-600">Contáctanos</a>
+                            ¿Necesitas extender la prueba? <a href="https://wa.me/5493454286955" target="_blank" className="underline hover:text-orange-600">Contáctanos</a>
                         </p>
                     </div>
                 </div>
