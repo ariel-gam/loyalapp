@@ -25,6 +25,10 @@ export const metadata: Metadata = {
   title: "LoyalApp",
   description: "Pide tu comida favorita.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
