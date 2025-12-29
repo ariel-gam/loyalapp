@@ -40,6 +40,17 @@ export default function AdminPage() {
     ];
     const [categories, setCategories] = useState<any[]>(DEFAULT_CATEGORIES);
 
+    // Schedule State
+    const [schedule, setSchedule] = useState<{
+        openTime: string;
+        closeTime: string;
+        closedDates: string[];
+    }>({
+        openTime: '',
+        closeTime: '',
+        closedDates: []
+    });
+
     // Form State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -80,6 +91,13 @@ export default function AdminPage() {
                 setStoreInfo(info);
                 if (info.categories && Array.isArray(info.categories)) {
                     setCategories(info.categories);
+                }
+                if (info.schedule) {
+                    setSchedule({
+                        openTime: info.schedule.openTime || '',
+                        closeTime: info.schedule.closeTime || '',
+                        closedDates: Array.isArray(info.schedule.closedDates) ? info.schedule.closedDates : []
+                    });
                 }
             } catch (err) {
                 console.error(err);
@@ -549,8 +567,10 @@ export default function AdminPage() {
                                             phone: formData.get('phone'),
                                             logo_url: formData.get('logo_url'),
                                             primary_color: formData.get('primary_color'),
-                                            categories: categories
+                                            categories: categories,
+                                            schedule: schedule
                                         };
+
                                         const res = await updateStoreSettings(newSettings);
                                         if (res.success) alert('Guardado!');
                                         else alert(res.message);
@@ -603,6 +623,82 @@ export default function AdminPage() {
                                         </div>
 
                                         <div><label className="text-sm font-bold">Color</label><input name="primary_color" type="color" defaultValue={storeInfo.primary_color || '#f97316'} className="h-10 w-full" /></div>
+
+                                        {/* Schedule Config */}
+                                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                            <h4 className="text-md font-bold text-blue-800 mb-4 flex items-center gap-2">
+                                                ⏰ Horarios y Disponibilidad
+                                            </h4>
+
+                                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Apertura</label>
+                                                    <input
+                                                        type="time"
+                                                        value={schedule.openTime}
+                                                        onChange={(e) => setSchedule({ ...schedule, openTime: e.target.value })}
+                                                        className="w-full border p-2 rounded bg-white"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Cierre</label>
+                                                    <input
+                                                        type="time"
+                                                        value={schedule.closeTime}
+                                                        onChange={(e) => setSchedule({ ...schedule, closeTime: e.target.value })}
+                                                        className="w-full border p-2 rounded bg-white"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-blue-600 mb-4">
+                                                Si dejas los horarios vacíos, la tienda aparecerá siempre "Abierta".
+                                            </p>
+
+                                            <div className="border-t border-blue-200 pt-4">
+                                                <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Fechas Cerradas (Feriados/Vacaciones)</label>
+                                                <div className="flex gap-2 mb-2">
+                                                    <input
+                                                        type="date"
+                                                        id="closed-date-picker"
+                                                        className="flex-1 border p-2 rounded text-sm"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const input = document.getElementById('closed-date-picker') as HTMLInputElement;
+                                                            if (input.value && !schedule.closedDates.includes(input.value)) {
+                                                                setSchedule({
+                                                                    ...schedule,
+                                                                    closedDates: [...schedule.closedDates, input.value].sort()
+                                                                });
+                                                                input.value = '';
+                                                            }
+                                                        }}
+                                                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                                                    >
+                                                        Agregar
+                                                    </button>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {schedule.closedDates.map((date) => (
+                                                        <span key={date} className="bg-white border border-blue-200 text-blue-800 px-2 py-1 rounded text-xs flex items-center gap-2">
+                                                            {new Date(date + 'T12:00:00').toLocaleDateString()}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSchedule({
+                                                                    ...schedule,
+                                                                    closedDates: schedule.closedDates.filter(d => d !== date)
+                                                                })}
+                                                                className="text-red-500 hover:text-red-700 font-bold"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                    {schedule.closedDates.length === 0 && <span className="text-gray-400 text-xs italic">No hay fechas bloqueadas</span>}
+                                                </div>
+                                            </div>
+                                        </div>
 
                                         {/* Category Management */}
                                         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -771,7 +867,8 @@ export default function AdminPage() {
                         </>
                     )}
                 </main>
-            )}
+            )
+            }
 
             {/* Modal for Product Edit */}
             {
@@ -923,65 +1020,67 @@ export default function AdminPage() {
             }
 
             {/* Account Deletion Modal */}
-            {deleteModalOpen && (
-                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl max-w-md w-full p-8 shadow-2xl border-2 border-red-100">
-                        <h3 className="text-2xl font-bold mb-4 text-red-600">⚠️ Eliminar Cuenta</h3>
-                        <p className="text-gray-600 mb-6 text-sm">
-                            Esta acción es <strong>irreversible</strong>. Escribe <span className="font-mono font-bold select-all bg-gray-100 px-1 rounded">ELIMINAR</span> abajo para confirmar.
-                        </p>
+            {
+                deleteModalOpen && (
+                    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <div className="bg-white rounded-xl max-w-md w-full p-8 shadow-2xl border-2 border-red-100">
+                            <h3 className="text-2xl font-bold mb-4 text-red-600">⚠️ Eliminar Cuenta</h3>
+                            <p className="text-gray-600 mb-6 text-sm">
+                                Esta acción es <strong>irreversible</strong>. Escribe <span className="font-mono font-bold select-all bg-gray-100 px-1 rounded">ELIMINAR</span> abajo para confirmar.
+                            </p>
 
-                        <input
-                            className="w-full border p-3 rounded mb-4 text-center tracking-widest uppercase font-bold"
-                            placeholder="Escribe ELIMINAR"
-                            value={deleteInput}
-                            onChange={e => setDeleteInput(e.target.value)}
-                        />
+                            <input
+                                className="w-full border p-3 rounded mb-4 text-center tracking-widest uppercase font-bold"
+                                placeholder="Escribe ELIMINAR"
+                                value={deleteInput}
+                                onChange={e => setDeleteInput(e.target.value)}
+                            />
 
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => {
-                                    setDeleteModalOpen(false);
-                                    setDeleteInput('');
-                                }}
-                                className="flex-1 py-3 bg-gray-100 font-bold text-gray-700 rounded-lg hover:bg-gray-200 transition"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                disabled={deleteInput !== 'ELIMINAR'}
-                                onClick={async () => {
-                                    if (deleteInput !== 'ELIMINAR') return;
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setDeleteModalOpen(false);
+                                        setDeleteInput('');
+                                    }}
+                                    className="flex-1 py-3 bg-gray-100 font-bold text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    disabled={deleteInput !== 'ELIMINAR'}
+                                    onClick={async () => {
+                                        if (deleteInput !== 'ELIMINAR') return;
 
-                                    if (!confirm('¿Última oportunidad? Se borrará todo.')) return;
+                                        if (!confirm('¿Última oportunidad? Se borrará todo.')) return;
 
-                                    setLoading(true);
-                                    try {
-                                        const { deleteAccount } = await import('@/actions/settingsActions');
-                                        const res = await deleteAccount();
-                                        if (res.success) {
-                                            alert('Cuenta eliminada. Gracias por usar LoyalApp.');
-                                            window.location.href = '/login';
-                                        } else {
-                                            alert('Error: ' + res.message);
+                                        setLoading(true);
+                                        try {
+                                            const { deleteAccount } = await import('@/actions/settingsActions');
+                                            const res = await deleteAccount();
+                                            if (res.success) {
+                                                alert('Cuenta eliminada. Gracias por usar LoyalApp.');
+                                                window.location.href = '/login';
+                                            } else {
+                                                alert('Error: ' + res.message);
+                                                setLoading(false);
+                                            }
+                                        } catch (err: any) {
+                                            alert('Error crítico: ' + err.message);
                                             setLoading(false);
                                         }
-                                    } catch (err: any) {
-                                        alert('Error crítico: ' + err.message);
-                                        setLoading(false);
-                                    }
-                                }}
-                                className={`flex-1 py-3 font-bold text-white rounded-lg transition ${deleteInput === 'ELIMINAR'
-                                    ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200'
-                                    : 'bg-gray-300 cursor-not-allowed'
-                                    }`}
-                            >
-                                {loading ? 'Eliminando...' : 'Confirmar'}
-                            </button>
+                                    }}
+                                    className={`flex-1 py-3 font-bold text-white rounded-lg transition ${deleteInput === 'ELIMINAR'
+                                        ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200'
+                                        : 'bg-gray-300 cursor-not-allowed'
+                                        }`}
+                                >
+                                    {loading ? 'Eliminando...' : 'Confirmar'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </div >
     );
 }

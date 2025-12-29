@@ -47,7 +47,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
                 )}
             </header>
 
-            <Catalog slug={slug} initialProducts={products} />
+            <Catalog slug={slug} initialProducts={products} store={store} />
 
             <CartButton />
             <CartModal store={store} />

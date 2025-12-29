@@ -4,9 +4,10 @@ import { useCart } from '@/context/CartContext';
 
 interface ProductCardProps {
     product: Product;
+    disabled?: boolean;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, disabled }: ProductCardProps) {
     const { addToCart, updateQuantity, items } = useCart();
 
     // Check if item is in cart to show quantity or visual feedback (optional)
@@ -27,15 +28,16 @@ export default function ProductCard({ product }: ProductCardProps) {
     const discountDayName = product.discountDay !== undefined ? days[product.discountDay] : '';
 
     const handleAddToCart = () => {
+        if (disabled) return;
         // Create a copy of the product with the *effective* price for the cart
         const productForCart = { ...product, price: finalPrice };
         addToCart(productForCart);
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow relative">
+        <div className={`bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow relative ${disabled ? 'opacity-70 grayscale' : ''}`}>
             {/* Discount Badge */}
-            {isDiscountActive && (
+            {isDiscountActive && !disabled && (
                 <div className="absolute top-3 left-3 z-10 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm animate-pulse">
                     ¡Oferta de {discountDayName}!
                 </div>
@@ -49,7 +51,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                     className="object-cover"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
-                {quantity > 0 && (
+                {quantity > 0 && !disabled && (
                     <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-md">
                         {quantity}
                     </div>
@@ -78,7 +80,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                         )}
                     </div>
 
-                    {quantity > 0 ? (
+                    {quantity > 0 && !disabled ? (
                         <div className="flex items-center bg-gray-100 rounded-full p-1 shadow-inner">
                             <button
                                 onClick={() => updateQuantity(product.id, -1)}
@@ -101,23 +103,30 @@ export default function ProductCard({ product }: ProductCardProps) {
                     ) : (
                         <button
                             onClick={handleAddToCart}
-                            className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-full shadow-md transition-all active:scale-95 flex items-center justify-center w-10 h-10"
+                            disabled={disabled}
+                            className={`p-2 rounded-full shadow-md transition-all flex items-center justify-center w-10 h-10 ${disabled ? 'bg-gray-300 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 active:scale-95 text-white'}`}
                             aria-label={`Agregar ${product.name} al carrito`}
                         >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={2.5}
-                                stroke="currentColor"
-                                className="w-5 h-5"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 4.5v15m7.5-7.5h-15"
-                                />
-                            </svg>
+                            {disabled ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-500">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                                </svg>
+                            ) : (
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={2.5}
+                                    stroke="currentColor"
+                                    className="w-5 h-5"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 4.5v15m7.5-7.5h-15"
+                                    />
+                                </svg>
+                            )}
                         </button>
                     )}
                 </div>
