@@ -38,6 +38,10 @@ export default function AdminPage() {
     // Password Reset State
     const [showPasswordReset, setShowPasswordReset] = useState(false);
 
+    // Account Deletion State
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deleteInput, setDeleteInput] = useState('');
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
@@ -630,6 +634,22 @@ export default function AdminPage() {
                                             </button>
                                         </form>
                                     </div>
+
+                                    <hr className="my-8 border-gray-200" />
+                                    <div>
+                                        <h3 className="text-lg font-bold text-red-600 mb-4">Zona de Peligro</h3>
+                                        <div className="bg-red-50 p-6 rounded-xl border border-red-200">
+                                            <p className="text-sm text-red-800 mb-4">
+                                                Si eliminas tu cuenta, se borrarán permanentemente tu tienda, productos, pedidos y clientes. Esta acción no se puede deshacer.
+                                            </p>
+                                            <button
+                                                onClick={() => setDeleteModalOpen(true)}
+                                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium transition"
+                                            >
+                                                Eliminar Cuenta
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </>
@@ -791,6 +811,67 @@ export default function AdminPage() {
                     </div>
                 )
             }
+
+            {/* Account Deletion Modal */}
+            {deleteModalOpen && (
+                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl max-w-md w-full p-8 shadow-2xl border-2 border-red-100">
+                        <h3 className="text-2xl font-bold mb-4 text-red-600">⚠️ Eliminar Cuenta</h3>
+                        <p className="text-gray-600 mb-6 text-sm">
+                            Esta acción es <strong>irreversible</strong>. Escribe <span className="font-mono font-bold select-all bg-gray-100 px-1 rounded">ELIMINAR</span> abajo para confirmar.
+                        </p>
+
+                        <input
+                            className="w-full border p-3 rounded mb-4 text-center tracking-widest uppercase font-bold"
+                            placeholder="Escribe ELIMINAR"
+                            value={deleteInput}
+                            onChange={e => setDeleteInput(e.target.value)}
+                        />
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setDeleteModalOpen(false);
+                                    setDeleteInput('');
+                                }}
+                                className="flex-1 py-3 bg-gray-100 font-bold text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                disabled={deleteInput !== 'ELIMINAR'}
+                                onClick={async () => {
+                                    if (deleteInput !== 'ELIMINAR') return;
+
+                                    if (!confirm('¿Última oportunidad? Se borrará todo.')) return;
+
+                                    setLoading(true);
+                                    try {
+                                        const { deleteAccount } = await import('@/actions/settingsActions');
+                                        const res = await deleteAccount();
+                                        if (res.success) {
+                                            alert('Cuenta eliminada. Gracias por usar LoyalApp.');
+                                            window.location.href = '/login';
+                                        } else {
+                                            alert('Error: ' + res.message);
+                                            setLoading(false);
+                                        }
+                                    } catch (err: any) {
+                                        alert('Error crítico: ' + err.message);
+                                        setLoading(false);
+                                    }
+                                }}
+                                className={`flex-1 py-3 font-bold text-white rounded-lg transition ${deleteInput === 'ELIMINAR'
+                                        ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200'
+                                        : 'bg-gray-300 cursor-not-allowed'
+                                    }`}
+                            >
+                                {loading ? 'Eliminando...' : 'Confirmar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }

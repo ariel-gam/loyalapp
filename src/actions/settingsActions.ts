@@ -88,3 +88,49 @@ export async function updateStoreSettings(newSettings: any) {
     }
     return { success: true };
 }
+
+export async function deleteAccount() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { success: false, message: "No autorizado" };
+
+    // Initialize Admin Client
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js');
+
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        return { success: false, message: "Error de configuración: Falta Service Role Key" };
+    }
+
+    const adminClient = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    );
+
+    // 1. Delete Store (Cascades to products, orders, etc.)
+    const { error: deleteStoreError } = await adminClient
+        .from('stores')
+        .delete()
+        .eq('owner_id', user.id);
+
+    if (deleteStoreError) {
+        console.error("Error deleting store:", deleteStoreError);
+        return { success: false, message: "Error eliminando datos de la tienda: " + deleteStoreError.message };
+    }
+
+    // 2. Delete Auth User
+    const { error: deleteUserError } = await adminClient.auth.admin.deleteUser(user.id);
+
+    if (deleteUserError) {
+        console.error("Error deleting user:", deleteUserError);
+        return { success: false, message: "Datos eliminados, pero hubo un error eliminando la cuenta de usuario: " + deleteUserError.message };
+    }
+
+    return { success: true };
+}
