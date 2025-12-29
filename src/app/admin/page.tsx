@@ -24,6 +24,20 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(true);
     const [showInactiveOnly, setShowInactiveOnly] = useState(false);
 
+    // Categories State
+    const DEFAULT_CATEGORIES = [
+        { id: 'pizzas', name: 'Pizzas' },
+        { id: 'empanadas', name: 'Empanadas' },
+        { id: 'hamburguesas', name: 'Hamburguesas' },
+        { id: 'bebidas', name: 'Bebidas' },
+        { id: 'sandwich-milanesa', name: 'Sandwich de Milanesas' },
+        { id: 'sandwich-miga', name: 'Sandwich de Miga' },
+        { id: 'papas-fritas', name: 'Papas Fritas' },
+        { id: 'arrollados', name: 'Arrollados' },
+        { id: 'postres', name: 'Postres' }
+    ];
+    const [categories, setCategories] = useState<any[]>(DEFAULT_CATEGORIES);
+
     // Form State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -62,6 +76,9 @@ export default function AdminPage() {
                     return;
                 }
                 setStoreInfo(info);
+                if (info.categories && Array.isArray(info.categories)) {
+                    setCategories(info.categories);
+                }
             } catch (err) {
                 console.error(err);
             } finally {
@@ -506,6 +523,7 @@ export default function AdminPage() {
                                             phone: formData.get('phone'),
                                             logo_url: formData.get('logo_url'),
                                             primary_color: formData.get('primary_color'),
+                                            categories: categories
                                         };
                                         const res = await updateStoreSettings(newSettings);
                                         if (res.success) alert('Guardado!');
@@ -559,6 +577,78 @@ export default function AdminPage() {
                                         </div>
 
                                         <div><label className="text-sm font-bold">Color</label><input name="primary_color" type="color" defaultValue={storeInfo.primary_color || '#f97316'} className="h-10 w-full" /></div>
+
+                                        {/* Category Management */}
+                                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                            <label className="text-sm font-bold block mb-2">Categorías de Productos</label>
+                                            <div className="space-y-2 mb-3">
+                                                {categories.map((cat, idx) => (
+                                                    <div key={idx} className="flex gap-2 items-center">
+                                                        <input
+                                                            value={cat.name}
+                                                            onChange={(e) => {
+                                                                const newCats = [...categories];
+                                                                newCats[idx].name = e.target.value;
+                                                                // Also update ID if it was auto-generated or allow editing ID? 
+                                                                // Better keep ID stable if possible, but for simple MVP let's just edit name.
+                                                                // Actually for proper keying we should probably not edit ID of existing items easily or it breaks relations if we used ID.
+                                                                // But we use ID as value. Let's assume user just edits display name. 
+                                                                // If they want to change ID (which is what is stored in product), it's harder.
+                                                                // Let's simplified: Allow editing Name. ID remains. 
+                                                                // For NEW items, we generate ID from name.
+                                                                setCategories(newCats);
+                                                            }}
+                                                            className="flex-1 border p-1 px-2 rounded text-sm"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (confirm('¿Borrar categoría?')) {
+                                                                    setCategories(categories.filter((_, i) => i !== idx));
+                                                                }
+                                                            }}
+                                                            className="text-red-500 hover:text-red-700 px-2"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    placeholder="Nueva categoría..."
+                                                    className="flex-1 border p-1 px-2 rounded text-sm"
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            const val = (e.target as HTMLInputElement).value;
+                                                            if (val.trim()) {
+                                                                const id = val.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                                                                setCategories([...categories, { id, name: val }]);
+                                                                (e.target as HTMLInputElement).value = '';
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                                                        const val = input.value;
+                                                        if (val.trim()) {
+                                                            const id = val.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                                                            setCategories([...categories, { id, name: val }]);
+                                                            input.value = '';
+                                                        }
+                                                    }}
+                                                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded text-sm"
+                                                >
+                                                    Agregar
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-2">Presiona Enter para agregar. Los IDs se generan automáticamente.</p>
+                                        </div>
+
                                         <button
                                             type="submit"
                                             onClick={(e) => {
@@ -673,16 +763,10 @@ export default function AdminPage() {
                                 <input name="name" placeholder="Nombre" defaultValue={editingProduct?.name} required className="w-full border p-2 rounded" />
                                 <textarea name="description" placeholder="Descripción" defaultValue={editingProduct?.description} className="w-full border p-2 rounded" />
                                 <input name="price" type="number" placeholder="Precio" defaultValue={editingProduct?.base_price} required className="w-full border p-2 rounded" />
-                                <select name="categoryId" defaultValue={editingProduct?.category_id || 'pizzas'} className="w-full border p-2 rounded capitalize">
-                                    <option value="pizzas">Pizzas</option>
-                                    <option value="empanadas">Empanadas</option>
-                                    <option value="hamburguesas">Hamburguesas</option>
-                                    <option value="bebidas">Bebidas</option>
-                                    <option value="sandwich-milanesa">Sandwich de Milanesas</option>
-                                    <option value="sandwich-miga">Sandwich de Miga</option>
-                                    <option value="papas-fritas">Papas Fritas</option>
-                                    <option value="arrollados">Arrollados</option>
-                                    <option value="postres">Postres</option>
+                                <select name="categoryId" defaultValue={editingProduct?.category_id || categories[0]?.id || 'pizzas'} className="w-full border p-2 rounded capitalize">
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
                                 </select>
 
                                 <div className="space-y-2">
@@ -862,8 +946,8 @@ export default function AdminPage() {
                                     }
                                 }}
                                 className={`flex-1 py-3 font-bold text-white rounded-lg transition ${deleteInput === 'ELIMINAR'
-                                        ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200'
-                                        : 'bg-gray-300 cursor-not-allowed'
+                                    ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200'
+                                    : 'bg-gray-300 cursor-not-allowed'
                                     }`}
                             >
                                 {loading ? 'Eliminando...' : 'Confirmar'}
