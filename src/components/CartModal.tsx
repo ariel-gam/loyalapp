@@ -21,6 +21,14 @@ export default function CartModal({ store }: CartModalProps) {
     const deliveryZones: { id: string; name: string; price: number }[] = store.deliveryZones || store.settings?.deliveryZones || [];
     const selectedZone = deliveryZones.find(z => z.id === selectedZoneId);
 
+    // Delivery Check
+    const isDeliveryEnabled = store.deliveryEnabled !== false && store.settings?.deliveryEnabled !== false;
+
+    // Force Pickup if delivery disabled
+    if (!isDeliveryEnabled && deliveryMethod === 'delivery') {
+        setDeliveryMethod('pickup');
+    }
+
     // Calculate final total including delivery
     const deliveryCost = (deliveryMethod === 'delivery' && selectedZone) ? selectedZone.price : 0;
     const finalTotal = totalPrice + deliveryCost;
@@ -140,20 +148,26 @@ export default function CartModal({ store }: CartModalProps) {
                     ) : (
                         <>
                             {/* Delivery Method Selector */}
-                            <div className="bg-gray-100 p-1 rounded-xl flex">
-                                <button
-                                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${deliveryMethod === 'delivery' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                    onClick={() => setDeliveryMethod('delivery')}
-                                >
-                                    Envío a Domicilio 🛵
-                                </button>
-                                <button
-                                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${deliveryMethod === 'pickup' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                    onClick={() => setDeliveryMethod('pickup')}
-                                >
-                                    Retiro en Local 🏃
-                                </button>
-                            </div>
+                            {isDeliveryEnabled ? (
+                                <div className="bg-gray-100 p-1 rounded-xl flex">
+                                    <button
+                                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${deliveryMethod === 'delivery' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                        onClick={() => setDeliveryMethod('delivery')}
+                                    >
+                                        Envío a Domicilio 🛵
+                                    </button>
+                                    <button
+                                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${deliveryMethod === 'pickup' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                        onClick={() => setDeliveryMethod('pickup')}
+                                    >
+                                        Retiro en Local 🏃
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="bg-orange-100 text-orange-800 p-3 rounded-xl text-center font-bold text-sm mb-4">
+                                    🏃 Solo disponible para Retiro en Local
+                                </div>
+                            )}
 
 
 

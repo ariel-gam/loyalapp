@@ -60,6 +60,7 @@ export default function AdminPage() {
 
     // Delivery Zones State
     const [deliveryZones, setDeliveryZones] = useState<{ id: string, name: string; price: number }[]>([]);
+    const [deliveryEnabled, setDeliveryEnabled] = useState(true);
 
     // Image Upload State
     const [imageUrl, setImageUrl] = useState('');
@@ -104,6 +105,9 @@ export default function AdminPage() {
                 }
                 if (info.deliveryZones && Array.isArray(info.deliveryZones)) {
                     setDeliveryZones(info.deliveryZones);
+                }
+                if (info.deliveryEnabled !== undefined) {
+                    setDeliveryEnabled(info.deliveryEnabled);
                 }
             } catch (err) {
                 console.error(err);
@@ -575,193 +579,209 @@ export default function AdminPage() {
                                             primary_color: formData.get('primary_color'),
                                             categories: categories,
                                             schedule: schedule,
-                                            deliveryZones: deliveryZones
+                                            deliveryZones: deliveryZones,
+                                            deliveryEnabled: deliveryEnabled
                                         };
+                                    };
 
-                                        const res = await updateStoreSettings(newSettings);
-                                        if (res.success) alert('Guardado!');
-                                        else alert(res.message);
+                                    const res = await updateStoreSettings(newSettings);
+                                    if (res.success) alert('Guardado!');
+                                    else alert(res.message);
                                     }} className="space-y-4">
-                                        <div><label className="text-sm font-bold">Nombre</label><input name="store_name" defaultValue={storeInfo.store_name} className="w-full border p-2 rounded" /></div>
-                                        <div><label className="text-sm font-bold">Dirección</label><input name="address" defaultValue={storeInfo.address} className="w-full border p-2 rounded" /></div>
-                                        <div><label className="text-sm font-bold">Teléfono/WhatsApp</label><input name="phone" defaultValue={storeInfo.phone} className="w-full border p-2 rounded" /></div>
+                                    <div><label className="text-sm font-bold">Nombre</label><input name="store_name" defaultValue={storeInfo.store_name} className="w-full border p-2 rounded" /></div>
+                                    <div><label className="text-sm font-bold">Dirección</label><input name="address" defaultValue={storeInfo.address} className="w-full border p-2 rounded" /></div>
+                                    <div><label className="text-sm font-bold">Teléfono/WhatsApp</label><input name="phone" defaultValue={storeInfo.phone} className="w-full border p-2 rounded" /></div>
 
-                                        <div>
-                                            <label className="text-sm font-bold block mb-1">Logo URL</label>
-                                            <div className="flex gap-2">
+                                    <div>
+                                        <label className="text-sm font-bold block mb-1">Logo URL</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                name="logo_url"
+                                                defaultValue={storeInfo.logo_url}
+                                                className="flex-1 border p-2 rounded"
+                                                id="logo-input" // Add ID to target with JS if needed, though we use defaultValue here. 
+                                            // Actually, for consistency with the other form, let's use controlled component ONLY if we want immediate preview update.
+                                            // But since the original form uses uncontrolled inputs (formData), we can just update the input's value using ref or direct manipulation? 
+                                            // Easier: Modify the form to be controlled? No, keep it uncontrolled but use state for the image URL input to support the upload button filling it.
+                                            // Let's use a small local component or just useState inside the map.
+                                            // Since we are inside the main AdminPage component, we can add a new state for logoUrl.
+                                            />
+                                            <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded flex items-center gap-2 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                                <span className="text-xl">📷</span>
+                                                <span className="text-sm font-medium">{uploading ? '...' : 'Subir'}</span>
                                                 <input
-                                                    name="logo_url"
-                                                    defaultValue={storeInfo.logo_url}
-                                                    className="flex-1 border p-2 rounded"
-                                                    id="logo-input" // Add ID to target with JS if needed, though we use defaultValue here. 
-                                                // Actually, for consistency with the other form, let's use controlled component ONLY if we want immediate preview update.
-                                                // But since the original form uses uncontrolled inputs (formData), we can just update the input's value using ref or direct manipulation? 
-                                                // Easier: Modify the form to be controlled? No, keep it uncontrolled but use state for the image URL input to support the upload button filling it.
-                                                // Let's use a small local component or just useState inside the map.
-                                                // Since we are inside the main AdminPage component, we can add a new state for logoUrl.
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    disabled={uploading}
+                                                    onChange={async (e) => {
+                                                        if (e.target.files && e.target.files[0]) {
+                                                            setUploading(true);
+                                                            try {
+                                                                const url = await uploadProductImage(e.target.files[0]);
+                                                                // Update the input value directly since it is uncontrolled for now, or better, force a re-render.
+                                                                // Simplest way for this specific form:
+                                                                const input = document.querySelector('input[name="logo_url"]') as HTMLInputElement;
+                                                                if (input) input.value = url;
+                                                            } catch (err) {
+                                                                alert('Error subiendo imagen: ' + (err as any).message);
+                                                            } finally {
+                                                                setUploading(false);
+                                                            }
+                                                        }
+                                                    }}
                                                 />
-                                                <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded flex items-center gap-2 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                                    <span className="text-xl">📷</span>
-                                                    <span className="text-sm font-medium">{uploading ? '...' : 'Subir'}</span>
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        className="hidden"
-                                                        disabled={uploading}
-                                                        onChange={async (e) => {
-                                                            if (e.target.files && e.target.files[0]) {
-                                                                setUploading(true);
-                                                                try {
-                                                                    const url = await uploadProductImage(e.target.files[0]);
-                                                                    // Update the input value directly since it is uncontrolled for now, or better, force a re-render.
-                                                                    // Simplest way for this specific form:
-                                                                    const input = document.querySelector('input[name="logo_url"]') as HTMLInputElement;
-                                                                    if (input) input.value = url;
-                                                                } catch (err) {
-                                                                    alert('Error subiendo imagen: ' + (err as any).message);
-                                                                } finally {
-                                                                    setUploading(false);
-                                                                }
-                                                            }
-                                                        }}
-                                                    />
-                                                </label>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div><label className="text-sm font-bold">Color</label><input name="primary_color" type="color" defaultValue={storeInfo.primary_color || '#f97316'} className="h-10 w-full" /></div>
+
+                                    {/* Schedule Config */}
+                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                        <h4 className="text-md font-bold text-blue-800 mb-4 flex items-center gap-2">
+                                            ⏰ Horarios y Disponibilidad
+                                        </h4>
+
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Apertura</label>
+                                                <input
+                                                    type="time"
+                                                    value={schedule.openTime}
+                                                    onChange={(e) => setSchedule({ ...schedule, openTime: e.target.value })}
+                                                    className="w-full border p-2 rounded bg-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Cierre</label>
+                                                <input
+                                                    type="time"
+                                                    value={schedule.closeTime}
+                                                    onChange={(e) => setSchedule({ ...schedule, closeTime: e.target.value })}
+                                                    className="w-full border p-2 rounded bg-white"
+                                                />
                                             </div>
                                         </div>
+                                        <p className="text-xs text-blue-600 mb-4">
+                                            Si dejas los horarios vacíos, la tienda aparecerá siempre "Abierta".
+                                        </p>
 
-                                        <div><label className="text-sm font-bold">Color</label><input name="primary_color" type="color" defaultValue={storeInfo.primary_color || '#f97316'} className="h-10 w-full" /></div>
-
-                                        {/* Schedule Config */}
-                                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                            <h4 className="text-md font-bold text-blue-800 mb-4 flex items-center gap-2">
-                                                ⏰ Horarios y Disponibilidad
-                                            </h4>
-
-                                            <div className="grid grid-cols-2 gap-4 mb-4">
-                                                <div>
-                                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Apertura</label>
-                                                    <input
-                                                        type="time"
-                                                        value={schedule.openTime}
-                                                        onChange={(e) => setSchedule({ ...schedule, openTime: e.target.value })}
-                                                        className="w-full border p-2 rounded bg-white"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Cierre</label>
-                                                    <input
-                                                        type="time"
-                                                        value={schedule.closeTime}
-                                                        onChange={(e) => setSchedule({ ...schedule, closeTime: e.target.value })}
-                                                        className="w-full border p-2 rounded bg-white"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <p className="text-xs text-blue-600 mb-4">
-                                                Si dejas los horarios vacíos, la tienda aparecerá siempre "Abierta".
-                                            </p>
-
-                                            <div className="border-t border-blue-200 pt-4">
-                                                <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Fechas Cerradas (Feriados/Vacaciones)</label>
-                                                <div className="flex gap-2 mb-2">
-                                                    <input
-                                                        type="date"
-                                                        id="closed-date-picker"
-                                                        className="flex-1 border p-2 rounded text-sm"
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const input = document.getElementById('closed-date-picker') as HTMLInputElement;
-                                                            if (input.value && !schedule.closedDates.includes(input.value)) {
-                                                                setSchedule({
-                                                                    ...schedule,
-                                                                    closedDates: [...schedule.closedDates, input.value].sort()
-                                                                });
-                                                                input.value = '';
-                                                            }
-                                                        }}
-                                                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                                                    >
-                                                        Agregar
-                                                    </button>
-                                                </div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {schedule.closedDates.map((date) => (
-                                                        <span key={date} className="bg-white border border-blue-200 text-blue-800 px-2 py-1 rounded text-xs flex items-center gap-2">
-                                                            {new Date(date + 'T12:00:00').toLocaleDateString()}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setSchedule({
-                                                                    ...schedule,
-                                                                    closedDates: schedule.closedDates.filter(d => d !== date)
-                                                                })}
-                                                                className="text-red-500 hover:text-red-700 font-bold"
-                                                            >
-                                                                ×
-                                                            </button>
-                                                        </span>
-                                                    ))}
-                                                    {schedule.closedDates.length === 0 && <span className="text-gray-400 text-xs italic">No hay fechas bloqueadas</span>}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Delivery Zones Config */}
-                                        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                                            <h4 className="text-md font-bold text-orange-800 mb-4 flex items-center gap-2">
-                                                🛵 Zonas de Envío
-                                            </h4>
-
-                                            <div className="space-y-3 mb-4">
-                                                {deliveryZones.map((zone, idx) => (
-                                                    <div key={idx} className="flex gap-2 items-center bg-white p-2 rounded shadow-sm">
-                                                        <input
-                                                            placeholder="Nombre Zona (Ej: Centro)"
-                                                            value={zone.name}
-                                                            onChange={(e) => {
-                                                                const newZones = [...deliveryZones];
-                                                                newZones[idx].name = e.target.value;
-                                                                setDeliveryZones(newZones);
-                                                            }}
-                                                            className="flex-1 border p-1 rounded text-sm"
-                                                        />
-                                                        <span className="text-gray-500 font-bold">$</span>
-                                                        <input
-                                                            type="number"
-                                                            placeholder="Precio"
-                                                            value={zone.price}
-                                                            onChange={(e) => {
-                                                                const newZones = [...deliveryZones];
-                                                                newZones[idx].price = Number(e.target.value);
-                                                                setDeliveryZones(newZones);
-                                                            }}
-                                                            className="w-24 border p-1 rounded text-sm"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setDeliveryZones(deliveryZones.filter((_, i) => i !== idx))}
-                                                            className="text-red-500 hover:text-red-700 px-2 font-bold"
-                                                        >
-                                                            ✕
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            <div className="flex gap-2">
+                                        <div className="border-t border-blue-200 pt-4">
+                                            <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Fechas Cerradas (Feriados/Vacaciones)</label>
+                                            <div className="flex gap-2 mb-2">
+                                                <input
+                                                    type="date"
+                                                    id="closed-date-picker"
+                                                    className="flex-1 border p-2 rounded text-sm"
+                                                />
                                                 <button
                                                     type="button"
-                                                    onClick={() => setDeliveryZones([...deliveryZones, { id: Date.now().toString(), name: '', price: 0 }])}
-                                                    className="bg-orange-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-orange-700 transition w-full"
+                                                    onClick={() => {
+                                                        const input = document.getElementById('closed-date-picker') as HTMLInputElement;
+                                                        if (input.value && !schedule.closedDates.includes(input.value)) {
+                                                            setSchedule({
+                                                                ...schedule,
+                                                                closedDates: [...schedule.closedDates, input.value].sort()
+                                                            });
+                                                            input.value = '';
+                                                        }
+                                                    }}
+                                                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                                                 >
-                                                    + Agregar Zona
+                                                    Agregar
                                                 </button>
                                             </div>
-                                            <p className="text-xs text-orange-600 mt-2">
-                                                Si agregas zonas, el cliente deberá elegir una al pedir envío a domicilio y el costo se sumará automáticamente.
-                                            </p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {schedule.closedDates.map((date) => (
+                                                    <span key={date} className="bg-white border border-blue-200 text-blue-800 px-2 py-1 rounded text-xs flex items-center gap-2">
+                                                        {new Date(date + 'T12:00:00').toLocaleDateString()}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSchedule({
+                                                                ...schedule,
+                                                                closedDates: schedule.closedDates.filter(d => d !== date)
+                                                            })}
+                                                            className="text-red-500 hover:text-red-700 font-bold"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                                {schedule.closedDates.length === 0 && <span className="text-gray-400 text-xs italic">No hay fechas bloqueadas</span>}
+                                            </div>
                                         </div>
+                                    </div>
+
+                                    {/* Delivery Zones Config */}
+                                    <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="text-md font-bold text-orange-800 flex items-center gap-2">
+                                                🛵 Zonas de Envío
+                                            </h4>
+                                            <label className="flex items-center cursor-pointer relative">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    checked={deliveryEnabled}
+                                                    onChange={(e) => setDeliveryEnabled(e.target.checked)}
+                                                />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                                                <span className="ml-3 text-sm font-medium text-orange-900">{deliveryEnabled ? 'Activado' : 'Desactivado'}</span>
+                                            </label>
+                                        </div>
+
+                                        {deliveryEnabled && (
+                                            <>
+                                                <div className="space-y-3 mb-4">
+                                                    {deliveryZones.map((zone, idx) => (
+                                                        <div key={idx} className="flex gap-2 items-center bg-white p-2 rounded shadow-sm">
+                                                            <input
+                                                                placeholder="Nombre Zona (Ej: Centro)"
+                                                                value={zone.name}
+                                                                onChange={(e) => {
+                                                                    const newZones = [...deliveryZones];
+                                                                    newZones[idx].name = e.target.value;
+                                                                    setDeliveryZones(newZones);
+                                                                }}
+                                                                className="flex-1 border p-1 rounded text-sm"
+                                                            />
+                                                            <span className="text-gray-500 font-bold">$</span>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Precio"
+                                                                value={zone.price}
+                                                                onChange={(e) => {
+                                                                    const newZones = [...deliveryZones];
+                                                                    newZones[idx].price = Number(e.target.value);
+                                                                    setDeliveryZones(newZones);
+                                                                }}
+                                                                className="w-24 border p-1 rounded text-sm"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setDeliveryZones(deliveryZones.filter((_, i) => i !== idx))}
+                                                                className="text-red-500 hover:text-red-700 px-2 font-bold"
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDeliveryZones([...deliveryZones, { id: Date.now().toString(), name: '', price: 0 }])}
+                                                        className="bg-orange-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-orange-700 transition w-full"
+                                                    >
+                                                        + Agregar Zona
+                                                    </button>
+                                                </div>
+                                                <p className="text-xs text-orange-600 mt-2">
+                                                    Si agregas zonas, el cliente deberá elegir una al pedir envío a domicilio y el costo se sumará automáticamente.
+                                                </p>
+                                            </div>
 
                                         {/* Category Management */}
                                         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">

@@ -354,17 +354,60 @@ export default function DemoAdminPage() {
                 )}
 
                 {activeTab === 'settings' && (
-                    <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100 opacity-75">
-                        <div className="absolute inset-0 bg-transparent z-10 cursor-not-allowed"></div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-6">Configuración (Solo Lectura)</h2>
-                        <div className="space-y-4 filter blur-[0.5px]">
+                    <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6">Configuración (Simulación)</h2>
+                        <div className="space-y-4">
                             <div><label className="text-sm font-bold">Nombre</label><input disabled defaultValue={storeInfo.store_name} className="w-full border p-2 rounded bg-gray-50" /></div>
                             <div><label className="text-sm font-bold">Dirección</label><input disabled defaultValue={storeInfo.address} className="w-full border p-2 rounded bg-gray-50" /></div>
+
+                            {/* Delivery Zones Demo */}
+                            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 mt-6 relative">
+                                <div className="absolute -top-3 -right-3 bg-blue-600 text-white text-xs px-2 py-1 rounded-full shadow-sm font-bold animate-pulse">
+                                    ¡NUEVO!
+                                </div>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h4 className="text-md font-bold text-orange-800 flex items-center gap-2">
+                                        🛵 Zonas de Envío
+                                    </h4>
+                                    <label className="flex items-center cursor-pointer relative">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            defaultChecked={true}
+                                            onChange={(e) => {
+                                                const zones = document.getElementById('demo-zones-container');
+                                                if (zones) zones.style.opacity = e.target.checked ? '1' : '0.5';
+                                            }}
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                                        <span className="ml-3 text-sm font-medium text-orange-900">Activado</span>
+                                    </label>
+                                </div>
+
+                                <div id="demo-zones-container" className="space-y-3 mb-4 transition-opacity">
+                                    <div className="flex gap-2 items-center bg-white p-2 rounded shadow-sm">
+                                        <input disabled value="Casco Céntrico" className="flex-1 border p-1 rounded text-sm bg-gray-50" />
+                                        <span className="text-gray-500 font-bold">$</span>
+                                        <input disabled value="1500" className="w-24 border p-1 rounded text-sm bg-gray-50" />
+                                        <button className="text-red-300 px-2 font-bold cursor-not-allowed">✕</button>
+                                    </div>
+                                    <div className="flex gap-2 items-center bg-white p-2 rounded shadow-sm">
+                                        <input disabled value="Barrios Aledaños" className="flex-1 border p-1 rounded text-sm bg-gray-50" />
+                                        <span className="text-gray-500 font-bold">$</span>
+                                        <input disabled value="2500" className="w-24 border p-1 rounded text-sm bg-gray-50" />
+                                        <button className="text-red-300 px-2 font-bold cursor-not-allowed">✕</button>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-orange-600">
+                                    En la versión real, aquí podrás configurar tus propias zonas y precios.
+                                </p>
+                            </div>
+
                             <div>
-                                <p className="text-center font-bold text-orange-600 bg-orange-100 py-4 rounded-lg mt-8">
-                                    🔒 La configuración está deshabilitada en la demo.
+                                <p className="text-center font-bold text-gray-500 bg-gray-100 py-4 rounded-lg mt-8 text-sm">
+                                    🔒 Para editar estos datos realmente, necesitas tu propia tienda.
                                     <br />
-                                    <Link href="/login" className="underline hover:text-orange-800">Crea tu cuenta gratis</Link> para configurar tu propio negocio.
+                                    <Link href="/login" className="underline hover:text-orange-800 text-orange-600">Crea tu cuenta gratis</Link> y pruébalo.
                                 </p>
                             </div>
                         </div>

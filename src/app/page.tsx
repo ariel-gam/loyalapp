@@ -34,6 +34,9 @@ export default function LandingPage() {
           <Link href="/demo-pizza" className="border-2 border-white/30 text-white text-lg px-6 py-4 rounded-full font-bold hover:bg-white/10 transition-all w-full sm:w-auto text-center">
             🍕 Ver Menú de Ejemplo
           </Link>
+          <Link href="/demo-admin" className="border-2 border-amber-400/50 text-amber-200 text-lg px-6 py-4 rounded-full font-bold hover:bg-amber-500/10 transition-all w-full sm:w-auto text-center flex items-center justify-center gap-2">
+            ⚙️ Panel Admin
+          </Link>
         </div>
 
         <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl text-left bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/10">
