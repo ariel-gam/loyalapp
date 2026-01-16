@@ -1582,15 +1582,16 @@ export default function AdminPage() {
                                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                                 onChange={(e) => {
                                                     if (e.target.files?.[0]) {
-                                                        // Preview logic could go here
+                                                        const file = e.target.files[0];
+                                                        setImageUrl(URL.createObjectURL(file));
                                                     }
                                                 }}
                                             />
                                             <span className="text-gray-500 text-sm">Tocá para subir foto 📸</span>
                                         </div>
-                                        {editingProduct?.image_url && (
+                                        {imageUrl && (
                                             <div className="mt-2 relative h-20 w-full rounded overflow-hidden">
-                                                <Image src={editingProduct.image_url} alt="Preview" fill className="object-contain" />
+                                                <Image src={imageUrl} alt="Preview" fill className="object-contain" />
                                             </div>
                                         )}
                                     </div>
