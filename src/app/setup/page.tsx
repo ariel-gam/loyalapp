@@ -37,7 +37,7 @@ export default function SetupPage() {
 
             const finalSlug = slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-');
 
-            const trialDays = coupon.trim().toUpperCase() === 'GRATIS30' ? 30 : 7;
+            const trialDays = coupon.trim().toUpperCase() === 'GRATIS30' ? 30 : 15;
             const trialEndsAt = new Date();
             trialEndsAt.setDate(trialEndsAt.getDate() + trialDays);
 

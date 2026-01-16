@@ -14,11 +14,17 @@ export async function createSubscriptionPreference() {
     // Get Store ID for reference
     const { data: store } = await supabase
         .from('stores')
-        .select('id, name, owner_id')
+        .select('id, name, owner_id, settings')
         .eq('owner_id', user.id)
         .single();
 
     if (!store) throw new Error("Tienda no encontrada");
+
+    // Check if user has used promo (First month 35k, then 60k)
+    // We store 'promo_used' in settings JSON
+    const promoUsed = store.settings?.promo_used === true;
+    const price = promoUsed ? 60000 : 35000;
+    const title = promoUsed ? 'Suscripción Mensual - LoyalApp' : 'Suscripción Mensual (Promo) - LoyalApp';
 
     const preference = new Preference(client);
 
@@ -27,9 +33,9 @@ export async function createSubscriptionPreference() {
             items: [
                 {
                     id: 'suscripcion_mensual',
-                    title: 'Suscripción Mensual - LoyalApp',
+                    title: title,
                     quantity: 1,
-                    unit_price: 60000, // Precio en ARS indicado por el usuario
+                    unit_price: price, // Dynamic Price
                     currency_id: 'ARS'
                 }
             ],

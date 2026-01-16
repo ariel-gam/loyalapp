@@ -35,24 +35,62 @@ export default function Catalog({ slug, initialProducts = [], store }: CatalogPr
                 }
 
                 // 2. Check Time
-                const { openTime, closeTime } = store.schedule;
-                if (!openTime || !closeTime) return true;
+                // 2. Check Time
+                const ranges = store.schedule.ranges || [];
+                // Backward compatibility
+                if (ranges.length === 0 && store.schedule.openTime && store.schedule.closeTime) {
+                    ranges.push({ open: store.schedule.openTime, close: store.schedule.closeTime });
+                }
+
+                if (ranges.length === 0) return true; // No schedule = Always Open
 
                 const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                let isOpenNow = false;
+                let nextOpenTime = null;
 
-                const [openH, openM] = openTime.split(':').map(Number);
-                const openMinutes = openH * 60 + openM;
+                // Sort ranges by open time to find next open easily
+                const sortedRanges = [...ranges].sort((a, b) => {
+                    const [aH, aM] = a.open.split(':').map(Number);
+                    const [bH, bM] = b.open.split(':').map(Number);
+                    return (aH * 60 + aM) - (bH * 60 + bM);
+                });
 
-                const [closeH, closeM] = closeTime.split(':').map(Number);
-                const closeMinutes = closeH * 60 + closeM;
+                for (const range of sortedRanges) {
+                    if (!range.open || !range.close) continue;
 
-                if (closeMinutes < openMinutes) {
-                    // Overnight (e.g. 18:00 to 02:00)
-                    return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
-                } else {
-                    // Same day (e.g. 09:00 to 17:00)
-                    return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+                    const [openH, openM] = range.open.split(':').map(Number);
+                    const openMinutes = openH * 60 + openM;
+
+                    const [closeH, closeM] = range.close.split(':').map(Number);
+                    const closeMinutes = closeH * 60 + closeM;
+
+                    let isMatch = false;
+                    if (closeMinutes < openMinutes) {
+                        // Overnight
+                        isMatch = currentMinutes >= openMinutes || currentMinutes < closeMinutes;
+                    } else {
+                        // Same day
+                        isMatch = currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+                    }
+
+                    if (isMatch) {
+                        isOpenNow = true;
+                        break;
+                    }
+
+                    // If not open, checks if this range is in the future
+                    if (!isOpenNow && currentMinutes < openMinutes) {
+                        if (!nextOpenTime) nextOpenTime = range.open;
+                    }
                 }
+
+                // If closed and no next time today found, maybe show "Mañana"?
+                // For now, we store nextOpenTime logic inside component state or return it?
+                // The current architecture checks distinct return value. 
+                // Let's rely on component state for "nextOpenTime" too?
+                // Or jus render based on store.schedule later.
+                // Re-calculating nextOpenTime in render is cheap.
+                return isOpenNow;
             };
 
             setIsStoreOpen(checkOpen());
@@ -60,6 +98,34 @@ export default function Catalog({ slug, initialProducts = [], store }: CatalogPr
             return () => clearInterval(interval);
         }
     }, [store]);
+
+    // Helper to get display text for banner
+    const getNextOpenMessage = () => {
+        const ranges = store?.schedule?.ranges || [];
+        if (ranges.length === 0 && store?.schedule?.openTime) {
+            ranges.push({ open: store.schedule.openTime, close: store.schedule.closeTime });
+        }
+        if (ranges.length === 0) return 'En este momento no estamos tomando pedidos.';
+
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        // Find first range opening after now
+        const sortedRanges = [...ranges].sort((a: any, b: any) => {
+            const [aH, aM] = a.open.split(':').map(Number);
+            const [bH, bM] = b.open.split(':').map(Number);
+            return (aH * 60 + aM) - (bH * 60 + bM);
+        });
+
+        for (const range of sortedRanges) {
+            const [openH, openM] = range.open.split(':').map(Number);
+            const openMinutes = openH * 60 + openM;
+            if (currentMinutes < openMinutes) {
+                return `Abrimos a las ${range.open} hs`;
+            }
+        }
+        return 'Abrimos mañana';
+    };
 
     useEffect(() => {
         let isMounted = true;
@@ -104,16 +170,22 @@ export default function Catalog({ slug, initialProducts = [], store }: CatalogPr
     return (
         <div className="pb-24">
             {/* Store Closed Banner */}
-            {!isStoreOpen && (
+            {!isStoreOpen ? (
                 <div className="bg-red-600 text-white p-4 text-center sticky top-0 z-50 shadow-md">
                     <h3 className="font-bold text-lg">🔴 Local Cerrado</h3>
                     <p className="text-sm opacity-90">
-                        {store?.schedule?.openTime
-                            ? `Abrimos a las ${store.schedule.openTime} hs`
-                            : 'En este momento no estamos tomando pedidos.'}
+                        {getNextOpenMessage()}
                     </p>
                 </div>
-            )}
+            ) : ((store?.delayTime > 20 || store?.settings?.delayTime > 20) && (
+                <div className="bg-orange-500 text-white p-2 text-center sticky top-0 z-50 shadow-md flex items-center justify-center gap-2 animate-fade-in">
+                    <span className="text-lg">⏳</span>
+                    <div>
+                        <p className="text-sm font-bold">Alta Demanda</p>
+                        <p className="text-xs opacity-90">Demora aprox: {(store?.delayTime || store?.settings?.delayTime || 0) + 20} - {(store?.delayTime || store?.settings?.delayTime || 0) + 40} min</p>
+                    </div>
+                </div>
+            ))}
 
             {/* Sticky Category Header */}
             <div className={`sticky ${!isStoreOpen ? 'top-[76px]' : 'top-0'} z-10 bg-white/95 backdrop-blur-sm shadow-sm transition-all`}>

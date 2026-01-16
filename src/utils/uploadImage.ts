@@ -39,9 +39,41 @@ export async function uploadProductImage(file: File) {
             .from('products')
             .getPublicUrl(filePath);
 
+
         return data.publicUrl;
     } catch (error) {
         console.error("Error uploading image:", error);
+        throw error;
+    }
+}
+
+export async function uploadTransferProof(file: File) {
+    try {
+        // 1. Compress (optional for proofs, but good for speed)
+        const compressedFile = await compressImage(file);
+
+        // 2. Generate path
+        const fileExt = file.name.split('.').pop();
+        const fileName = `proof-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `proofs/${fileName}`; // Store in proofs folder within products bucket
+
+        // 3. Upload
+        const { error: uploadError } = await supabase.storage
+            .from('products') // Reusing products bucket to avoid migration complexity
+            .upload(filePath, compressedFile);
+
+        if (uploadError) {
+            throw uploadError;
+        }
+
+        // 4. Get URL
+        const { data } = supabase.storage
+            .from('products')
+            .getPublicUrl(filePath);
+
+        return data.publicUrl;
+    } catch (error) {
+        console.error("Error uploading transfer proof:", error);
         throw error;
     }
 }

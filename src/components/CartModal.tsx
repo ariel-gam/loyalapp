@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import Image from 'next/image';
 import { submitOrder } from '@/actions/orderActions';
+import { uploadTransferProof } from '@/utils/uploadImage';
 
 interface CartModalProps {
     store: any;
@@ -14,12 +15,20 @@ export default function CartModal({ store }: CartModalProps) {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('delivery');
-    const [address, setAddress] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('cash');
+    const [street, setStreet] = useState('');
+    const [streetNumber, setStreetNumber] = useState('');
     const [selectedZoneId, setSelectedZoneId] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [transferFile, setTransferFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     const deliveryZones: { id: string; name: string; price: number }[] = store.deliveryZones || store.settings?.deliveryZones || [];
     const selectedZone = deliveryZones.find(z => z.id === selectedZoneId);
+
+    // Store Constants
+    const storeAddress = store.address || store.settings?.address || 'Dirección no disponible';
+    const storePhone = store.phone || store.settings?.phone || '5491112345678';
 
     // Delivery Check
     const isDeliveryEnabled = store.deliveryEnabled !== false && store.settings?.deliveryEnabled !== false;
@@ -35,8 +44,42 @@ export default function CartModal({ store }: CartModalProps) {
 
     if (!isCartOpen) return null;
 
-    const storeAddress = store.address || store.settings?.address || 'Dirección no disponible';
-    const storePhone = store.phone || store.settings?.phone || '5491112345678';
+    const kitchenDelay = store?.delayTime || store?.settings?.delayTime || 0;
+    const baseDeliveryTime = 25; // Average base time
+    const totalMin = kitchenDelay + baseDeliveryTime;
+    const totalMax = totalMin + 15;
+
+    // Construct the message
+    const constructMessage = () => {
+        let message = `*Hola! Quiero realizar un pedido en ${store.name || 'LoyalFood'}* 🍔%0A%0A`;
+        message += `*Cliente:* ${name}%0A`;
+        message += `*Teléfono:* ${phone}%0A`;
+        message += `*MODALIDAD:* ${deliveryMethod === 'delivery' ? 'ENVÍO A DOMICILIO 🛵' : 'RETIRO EN LOCAL 🏃'}%0A`;
+        message += `*PAGO:* ${paymentMethod === 'transfer' ? 'TRANSFERENCIA (Envío comprobante) 🏦' : 'EFECTIVO 💵'}%0A`;
+
+        if (deliveryMethod === 'delivery') {
+            message += `*Dirección:* ${street} ${streetNumber}%0A`;
+            if (selectedZone) {
+                message += `*Zona de Envío:* ${selectedZone.name} ($${selectedZone.price})%0A`;
+            }
+            // Add Estimate to Message
+            if (kitchenDelay > 0) {
+                message += `_(Estimado notificado: ${totalMin}-${totalMax} min)_%0A`;
+            }
+        }
+
+        // ... (rest of message construction)
+        message += `%0A*Detalle del Pedido:*%0A`;
+        items.forEach((item) => {
+            message += `- ${item.quantity}x ${item.product.name} ($${(item.product.price * item.quantity).toLocaleString('es-AR')})%0A`;
+        });
+        message += `%0A*TOTAL: $${finalTotal.toLocaleString('es-AR')}*`;
+        if (deliveryMethod === 'pickup') {
+            message += `%0A%0A_Retiro por: ${storeAddress}_`;
+        }
+        return message;
+    };
+
 
     const handleCheckout = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -47,8 +90,8 @@ export default function CartModal({ store }: CartModalProps) {
             return;
         }
         if (deliveryMethod === 'delivery') {
-            if (!address) {
-                alert('Por favor completa tu dirección de envío');
+            if (!street || !streetNumber) {
+                alert('Por favor completa la calle y el número');
                 return;
             }
             if (deliveryZones.length > 0 && !selectedZoneId) {
@@ -59,54 +102,62 @@ export default function CartModal({ store }: CartModalProps) {
 
         const phoneClean = phone.replace(/\D/g, '');
 
+        if (paymentMethod === 'transfer' && !transferFile) {
+            alert('Por favor sube el comprobante de transferencia para confirmar el pedido.');
+            return;
+        }
+
         setIsSubmitting(true);
         try {
+            let finalAddress = `${street} ${streetNumber}`;
+            let proofUrl = '';
+
+            if (paymentMethod === 'transfer' && transferFile) {
+                setIsUploading(true);
+                try {
+                    proofUrl = await uploadTransferProof(transferFile);
+                    console.log('Proof uploaded:', proofUrl);
+                } catch (error) {
+                    console.error('Error uploading proof:', error);
+                    alert('Error al subir el comprobante. Por favor intenta de nuevo.');
+                    setIsUploading(false);
+                    return;
+                }
+                setIsUploading(false);
+            }
+
+            console.log('Submitting order with address:', finalAddress); // Debug log
+
             await submitOrder({
                 storeId: store.id,
                 name,
                 phone: phoneClean,
                 items,
                 deliveryMethod,
-                address,
+                address: finalAddress,
                 deliveryZone: selectedZone ? { name: selectedZone.name, price: selectedZone.price } : undefined,
-                totalPrice: finalTotal // Save the total with delivery
+                totalPrice: finalTotal
             });
+
+            // Construct message with proof link
+            let message = constructMessage();
+            if (proofUrl) {
+                message += `%0A%0A📄 *Comprobante:* ${proofUrl}`;
+            }
+
+            const url = `https://wa.me/${storePhone}?text=${message}`;
+            window.open(url, '_blank');
+            clearCart();
+            toggleCart();
+
         } catch (err) {
             console.error("Error saving order:", err);
+            alert('Hubo un error al procesar el pedido.');
+        } finally {
+            setIsSubmitting(false);
         }
-        setIsSubmitting(false);
-
-        // Construct the message
-        let message = `*Hola! Quiero realizar un pedido en ${store.name || 'LoyalFood'}* 🍔%0A%0A`;
-        message += `*Cliente:* ${name}%0A`;
-        message += `*Teléfono:* ${phone}%0A`;
-        message += `*MODALIDAD:* ${deliveryMethod === 'delivery' ? 'ENVÍO A DOMICILIO 🛵' : 'RETIRO EN LOCAL 🏃'}%0A`;
-
-        if (deliveryMethod === 'delivery') {
-            message += `*Dirección:* ${address}%0A`;
-            if (selectedZone) {
-                message += `*Zona de Envío:* ${selectedZone.name} ($${selectedZone.price})%0A`;
-            }
-        }
-
-        message += `%0A*Detalle del Pedido:*%0A`;
-
-        items.forEach((item) => {
-            message += `- ${item.quantity}x ${item.product.name} ($${(item.product.price * item.quantity).toLocaleString('es-AR')})%0A`;
-        });
-
-        message += `%0A*TOTAL: $${finalTotal.toLocaleString('es-AR')}*`;
-
-        if (deliveryMethod === 'pickup') {
-            message += `%0A%0A_Retiro por: ${storeAddress}_`;
-        }
-
-        const url = `https://wa.me/${storePhone}?text=${message}`;
-
-        window.open(url, '_blank');
-        clearCart();
-        toggleCart();
     };
+
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pointer-events-none">
@@ -236,6 +287,65 @@ export default function CartModal({ store }: CartModalProps) {
                                 ))}
                             </div>
 
+                            {/* Payment Method Selector */}
+                            <div className="space-y-3 pt-2">
+                                <h3 className="font-bold text-gray-900">Forma de Pago</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('cash')}
+                                        className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'cash' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-orange-200'}`}
+                                    >
+                                        <span className="text-2xl">💵</span>
+                                        <span className="font-bold text-sm">Efectivo</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('transfer')}
+                                        className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'transfer' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-orange-200'}`}
+                                    >
+                                        <span className="text-2xl">🏦</span>
+                                        <span className="font-bold text-sm">Transferencia</span>
+                                    </button>
+                                </div>
+
+                                {paymentMethod === 'transfer' && (
+                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 animate-fade-in text-sm text-blue-800">
+                                        <p className="font-bold mb-2">Datos para transferir:</p>
+                                        <div className="bg-white p-3 rounded-lg border border-blue-100 mb-2 font-mono text-xs">
+                                            <p>CBU: <span className="font-bold select-all">{store.cbu || 'No configurado'}</span></p>
+                                            <p>Alias: <span className="font-bold select-all">{store.alias || 'No configurado'}</span></p>
+                                            {store.bank_name && <p>Banco: {store.bank_name}</p>}
+                                        </div>
+                                        <p className="text-xs">
+                                            ⚠️ Al finalizar el pedido, se enviará el comprobante junto con el pedido.
+                                        </p>
+
+                                        <div className="mt-3">
+                                            <label className="block text-xs font-bold text-blue-900 mb-1">
+                                                Subir Comprobante (*)
+                                            </label>
+                                            <input
+                                                type="file"
+                                                accept="image/*,application/pdf"
+                                                onChange={(e) => {
+                                                    if (e.target.files && e.target.files[0]) {
+                                                        setTransferFile(e.target.files[0]);
+                                                    }
+                                                }}
+                                                className="block w-full text-xs text-blue-900
+                                                    file:mr-2 file:py-2 file:px-4
+                                                    file:rounded-full file:border-0
+                                                    file:text-xs file:font-semibold
+                                                    file:bg-blue-100 file:text-blue-700
+                                                    hover:file:bg-blue-200
+                                                "
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             <hr className="border-gray-100" />
 
                             {/* User Form */}
@@ -267,19 +377,33 @@ export default function CartModal({ store }: CartModalProps) {
                                         />
                                     </div>
 
-                                    {/* Conditional Address Field */}
+                                    {/* Separate Address Fields */}
                                     {deliveryMethod === 'delivery' ? (
-                                        <div className="animate-fade-in">
-                                            <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Dirección de Envío</label>
-                                            <input
-                                                type="text"
-                                                id="address"
-                                                required
-                                                value={address}
-                                                onChange={(e) => setAddress(e.target.value)}
-                                                placeholder="Calle, Número, Piso, Depto..."
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all placeholder:text-gray-400 text-gray-900"
-                                            />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="col-span-1">
+                                                <label htmlFor="street" className="block text-sm font-bold text-gray-800 mb-1">Calle (*)</label>
+                                                <input
+                                                    type="text"
+                                                    id="street"
+                                                    required
+                                                    value={street}
+                                                    onChange={(e) => setStreet(e.target.value)}
+                                                    placeholder="Ej: San Martín"
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all placeholder:text-gray-400 text-gray-900"
+                                                />
+                                            </div>
+                                            <div className="col-span-1">
+                                                <label htmlFor="streetNumber" className="block text-sm font-bold text-gray-800 mb-1">Número (*)</label>
+                                                <input
+                                                    type="text"
+                                                    id="streetNumber"
+                                                    required
+                                                    value={streetNumber}
+                                                    onChange={(e) => setStreetNumber(e.target.value)}
+                                                    placeholder="Ej: 1234"
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all placeholder:text-gray-400 text-gray-900"
+                                                />
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 animate-fade-in">
@@ -297,6 +421,12 @@ export default function CartModal({ store }: CartModalProps) {
                 {/* Footer actions */}
                 {items.length > 0 && (
                     <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                        {/* Display Estimated Time */}
+                        {isDeliveryEnabled && deliveryMethod === 'delivery' && (
+                            <div className="mb-3 text-center text-sm font-medium text-gray-500 bg-white p-2 rounded-lg border border-gray-200">
+                                ⏳ Tiempo estimado: <span className="text-orange-600 font-bold">{totalMin}-{totalMax} min</span>
+                            </div>
+                        )}
                         <div className="flex justify-between items-center mb-4">
                             <span className="text-gray-600">Total {deliveryCost > 0 && <span className="text-xs text-orange-600">(Envío: +${deliveryCost})</span>}</span>
                             <span className="text-2xl font-bold text-gray-900">${finalTotal.toLocaleString('es-AR')}</span>

@@ -236,9 +236,61 @@ export async function toggleProductAvailability(id: string, currentStatus: boole
     }
 }
 
+export async function bulkUpdateProductPrices(productIds: string[], percentage: number) {
+    const supabase = await createClient();
+    try {
+        const { storeId } = await getAuthStore(supabase);
+
+        if (!productIds.length) return { success: false, message: "No se seleccionaron productos" };
+        if (percentage === 0) return { success: true, message: "Sin cambios" };
+
+        // 1. Fetch current prices
+        const { data: products, error: fetchError } = await supabase
+            .from('products')
+            .select('id, base_price')
+            .in('id', productIds)
+            .eq('store_id', storeId);
+
+        if (fetchError || !products) return { success: false, message: "Error al obtener productos" };
+
+        // 2. Calculate updates
+        // We do this one by one or construct a big update. 
+        // For simplicity and safety (RLS), we'll iterate. 
+        // Supabase doesn't have a simple "update from values" in JS client yet for different values per row without raw SQL.
+        // Given the scale (likely < 100 products), iterating is fine.
+
+        let updatedCount = 0;
+
+        for (const product of products) {
+            const currentPrice = product.base_price || 0;
+            const increase = currentPrice * (percentage / 100);
+            let newPrice = Math.round(currentPrice + increase);
+
+            // Optional: Round to nearest 10 or 100 to look cleaner
+            // e.g. 1532 -> 1530 or 1500
+            // Let's round to nearest 10 for now
+            newPrice = Math.round(newPrice / 10) * 10;
+
+            const { error: updateError } = await supabase
+                .from('products')
+                .update({ base_price: newPrice })
+                .eq('id', product.id)
+                .eq('store_id', storeId); // Double check safety
+
+            if (!updateError) updatedCount++;
+        }
+
+        revalidatePath('/admin');
+        return { success: true, message: `Se actualizaron ${updatedCount} productos` };
+
+    } catch (e: any) {
+        return { success: false, message: e.message };
+    }
+}
+
 // --- STATISTICS ---
 
-export async function getSalesRanking(period: 'day' | 'week' | 'month') {
+export async function getAdminStats(period: 'day' | 'week' | 'month') {
     const supabase = await createClient();
     try {
         const { storeId } = await getAuthStore(supabase);
@@ -255,20 +307,29 @@ export async function getSalesRanking(period: 'day' | 'week' | 'month') {
             startDate.setHours(0, 0, 0, 0);
         } else if (period === 'month') {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            startDate.setHours(0, 0, 0, 0);
         }
 
         const { data: orders, error } = await supabase
             .from('orders')
-            .select('details')
+            .select('details, total_amount, delivery_method')
             .eq('store_id', storeId)
             .eq('status', 'paid')
             .gte('created_at', startDate.toISOString());
 
-        if (error) return [];
+        if (error) throw error;
 
+        let totalRevenue = 0;
+        let totalOrders = orders.length;
+        let deliveryCount = 0;
+        let pickupCount = 0;
         const productStats: Record<string, { name: string, quantity: number, revenue: number }> = {};
 
         orders.forEach((order: any) => {
+            totalRevenue += Number(order.total_amount || 0);
+            if (order.delivery_method === 'delivery') deliveryCount++;
+            else pickupCount++;
+
             if (Array.isArray(order.details)) {
                 order.details.forEach((item: any) => {
                     const id = item.product.id;
@@ -280,14 +341,33 @@ export async function getSalesRanking(period: 'day' | 'week' | 'month') {
                         };
                     }
                     productStats[id].quantity += item.quantity;
-                    productStats[id].revenue += item.quantity * item.product.price;
+                    productStats[id].revenue += item.quantity * (item.product.price || 0);
                 });
             }
         });
 
-        return Object.values(productStats).sort((a, b) => b.quantity - a.quantity);
+        const ranking = Object.values(productStats).sort((a, b) => b.quantity - a.quantity);
+        const averageTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+        return {
+            totalRevenue,
+            totalOrders,
+            averageTicket,
+            deliveryStats: {
+                delivery: deliveryCount,
+                pickup: pickupCount
+            },
+            ranking: ranking.slice(0, 10) // Top 10 products
+        };
     } catch (e) {
-        return [];
+        console.error('Error fetching admin stats:', e);
+        return {
+            totalRevenue: 0,
+            totalOrders: 0,
+            averageTicket: 0,
+            deliveryStats: { delivery: 0, pickup: 0 },
+            ranking: []
+        };
     }
 }
 
@@ -390,6 +470,25 @@ export async function clearAllCustomers() {
             .delete()
             .eq('store_id', storeId)
             .neq('id', '00000000-0000-0000-0000-000000000000');
+
+        if (error) return { success: false, message: error.message };
+
+        revalidatePath('/admin');
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, message: e.message };
+    }
+}
+
+export async function archiveOrder(id: string) {
+    const supabase = await createClient();
+    try {
+        await getAuthStore(supabase); // Verify auth
+
+        const { error } = await supabase
+            .from('orders')
+            .update({ is_archived: true })
+            .eq('id', id);
 
         if (error) return { success: false, message: error.message };
 

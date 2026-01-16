@@ -1,0 +1,28 @@
+
+> loyalfood@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\yo\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\yo\Documents\AutoTunePro\loyalfood\package-lock.json
+
+▲ Next.js 16.1.0 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 11.1s
+  Running TypeScript ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/17) ...
+  Generating static pages using 3 workers (4/17) 
+  Generating static pages using 3 workers (8/17) 
+Error occurred prerendering page "/demo-pizza". Read more: https://nextjs.org/docs/messages/prerender-error
+TypeError: Cannot read properties of undefined (reading 'delayTime')
+    at h (C:\Users\yo\Documents\AutoTunePro\loyalfood\.next\server\chunks\ssr\Documents_AutoTunePro_loyalfood_src_components_1cad9261._.js:1:5395) {
+  digest: '2494271684'
+}
+Export encountered an error on /demo-pizza/page: /demo-pizza, exiting the build.
+⨯ Next.js build worker exited with code: 1 and signal: null

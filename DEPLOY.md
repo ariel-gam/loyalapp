@@ -27,8 +27,12 @@ Antes de darle a "Deploy", busca la sección **Environment Variables** y agrega 
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | *Tu URL de Supabase* |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | *Tu Key Anon de Supabase* |
+| `SUPABASE_SERVICE_ROLE_KEY` | *Tu Service Role Key (Admin) de Supabase* |
+| `MP_ACCESS_TOKEN` | *Tu Access Token de Mercado Pago* |
+| `EMAIL_USER` | *Tu Email de Gmail (para enviar credenciales)* |
+| `EMAIL_PASS` | *Tu Contraseña de Aplicación de Gmail* |
 
-> ⚠️ Sin esto, la aplicación no podrá conectarse a la base de datos.
+> ⚠️ Sin estas variables, el registro de usuarios y el pago con Mercado Pago fallarán.
 
 ## 5. Desplegar
 Haz clic en **Deploy**. Vercel construirá la aplicación y en unos minutos te dará una URL (ej: `loyalfood.vercel.app`).

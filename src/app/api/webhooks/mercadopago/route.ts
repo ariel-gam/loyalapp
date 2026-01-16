@@ -29,20 +29,29 @@ export async function POST(request: Request) {
                 const storeId = paymentInfo.external_reference;
 
                 if (storeId) {
+                    // Fetch Current Settings to merge
+                    const { data: currentStore } = await supabase
+                        .from('stores')
+                        .select('settings')
+                        .eq('id', storeId)
+                        .single();
+
                     // Calculamos la nueva fecha de vencimiento (30 días más)
-                    // Primero obtenemos la fecha actual de vencimiento para sumar, o desde hoy si ya venció
-
-                    // Nota: Aquí usamos supabase-js estándar, pero en producción deberíamos usar Service Role 
-                    // si tenemos RLS estricto que impida leer/escribir stores ajenos.
-                    // Asumiremos que tenemos una función RPC o permisos adecuados, o usamos service role client aqui mismo.
-
-                    // Simplificación: Sumamos 30 días a HOY. (Lo ideal es sumar a la fecha actual de fin si es futura)
                     const newExpiryDate = new Date();
                     newExpiryDate.setDate(newExpiryDate.getDate() + 30);
 
+                    // Update settings to mark promo as used
+                    const updatedSettings = {
+                        ...(currentStore?.settings || {}),
+                        promo_used: true
+                    };
+
                     const { error } = await supabase
                         .from('stores')
-                        .update({ trial_ends_at: newExpiryDate.toISOString() }) // Reusamos este campo o creamos uno nuevo 'subscription_ends_at'
+                        .update({
+                            trial_ends_at: newExpiryDate.toISOString(),
+                            settings: updatedSettings
+                        })
                         .eq('id', storeId);
 
                     if (error) {

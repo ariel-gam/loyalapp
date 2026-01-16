@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -12,6 +12,16 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [isRegister, setIsRegister] = useState(false);
     const [isRecovery, setIsRecovery] = useState(false);
+    const [coupon, setCoupon] = useState('');
+    const [showCouponField, setShowCouponField] = useState(false);
+
+    // Auto-enable register if trial link is used
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('trial') === 'true') {
+            setIsRegister(true);
+        }
+    }, []);
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,8 +43,19 @@ export default function LoginPage() {
                     options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.loyalapp.com.ar'}/auth/callback` }
                 });
                 if (error) throw error;
+                // Enviar correo de bienvenida propio
+                try {
+                    await fetch('/api/send-welcome', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                } catch (e) {
+                    console.error("Error enviando email de bienvenida custom:", e);
+                }
+
                 setLoading(false);
-                alert('¡Registro exitoso! Te hemos enviado un correo para confirmar tu cuenta. Por favor revisa tu bandeja de entrada (y spam) antes de iniciar sesión.');
+                alert('¡Registro exitoso! Te hemos enviado un correo con tus credenciales. Ya puedes iniciar sesión.');
                 setIsRegister(false);
             } else {
                 console.log("Iniciando sesión con:", email);
@@ -52,12 +73,36 @@ export default function LoginPage() {
                     console.log("Buscando tienda...");
                     const { data: store, error: storeError } = await supabase
                         .from('stores')
-                        .select('slug')
+                        .select('*')
                         .eq('owner_id', data.user.id)
                         .maybeSingle();
 
                     if (storeError) {
                         console.error("Error buscando tienda:", storeError);
+                    }
+
+                    // Apply coupon if provided
+                    if (coupon && coupon.trim() && store) {
+                        try {
+                            const response = await fetch('/api/apply-coupon', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    storeId: store.id,
+                                    couponCode: coupon.trim().toUpperCase()
+                                })
+                            });
+
+                            const result = await response.json();
+
+                            if (response.ok) {
+                                alert(`✅ ¡Cupón aplicado! Tu período de prueba se extendió por ${result.daysAdded} días adicionales.`);
+                            } else {
+                                alert(`❌ ${result.error || 'Cupón inválido'}`);
+                            }
+                        } catch (err) {
+                            console.error("Error aplicando cupón:", err);
+                        }
                     }
 
                     if (store) {
@@ -150,6 +195,38 @@ export default function LoginPage() {
                                         )}
                                     </button>
                                 </div>
+                            </div>
+                        )}
+
+                        {!isRecovery && !isRegister && (
+                            <div className="space-y-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCouponField(!showCouponField)}
+                                    className="text-sm font-medium text-orange-600 hover:text-orange-500 flex items-center gap-2"
+                                >
+                                    {showCouponField ? '✕ Cerrar' : '🎟️ ¿Tienes un cupón VIP?'}
+                                </button>
+
+                                {showCouponField && (
+                                    <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                                        <label htmlFor="coupon" className="block text-sm font-medium text-gray-700 mb-2">
+                                            Código de Cupón
+                                        </label>
+                                        <input
+                                            id="coupon"
+                                            name="coupon"
+                                            type="text"
+                                            value={coupon}
+                                            onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                                            placeholder="VIP30-XXXXX"
+                                            className="appearance-none block w-full px-3 py-2 border border-orange-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm font-mono"
+                                        />
+                                        <p className="mt-2 text-xs text-gray-600">
+                                            💡 Ingresa tu código para extender tu período de prueba
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
 

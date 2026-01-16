@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google"; // Removed unused imports if any, keeping these
 import "./globals.css";
+import "leaflet/dist/leaflet.css";
 import { CartProvider } from "@/context/CartContext";
 
 const geistSans = Geist({

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getRecentOrders, getAdminProducts, createProduct, deleteProduct, toggleProductAvailability, getSalesRanking, updateProduct, getCustomers, updateOrderStatus, clearAllOrders, resetAllStats, clearAllCustomers } from '@/actions/adminActions';
+import { getRecentOrders, getAdminProducts, createProduct, deleteProduct, toggleProductAvailability, getAdminStats, updateProduct, getCustomers, updateOrderStatus, archiveOrder, clearAllOrders, resetAllStats, clearAllCustomers, bulkUpdateProductPrices } from '@/actions/adminActions';
 import { getStoreSettings, updateStoreSettings } from '@/actions/settingsActions';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
@@ -11,7 +11,7 @@ import InstallAppButton from '@/components/InstallAppButton';
 
 export default function AdminPage() {
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'stats' | 'customers' | 'settings'>('orders');
+    const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'stats' | 'customers' | 'settings' | 'help'>('orders');
 
     // Store Info
     const [storeInfo, setStoreInfo] = useState<any>(null);
@@ -21,10 +21,18 @@ export default function AdminPage() {
     const [orders, setOrders] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [customers, setCustomers] = useState<any[]>([]);
-    const [ranking, setRanking] = useState<any[]>([]);
+    const [stats, setStats] = useState<any>({
+        totalRevenue: 0,
+        totalOrders: 0,
+        averageTicket: 0,
+        deliveryStats: { delivery: 0, pickup: 0 },
+        ranking: []
+    });
     const [rankingPeriod, setRankingPeriod] = useState<'day' | 'week' | 'month'>('day');
+    const [soundEnabled, setSoundEnabled] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showInactiveOnly, setShowInactiveOnly] = useState(false);
+    const [newOrderAlert, setNewOrderAlert] = useState(false);
 
     // Categories State
     const DEFAULT_CATEGORIES = [
@@ -44,10 +52,12 @@ export default function AdminPage() {
     const [schedule, setSchedule] = useState<{
         openTime: string;
         closeTime: string;
+        ranges: { id: string; open: string; close: string }[];
         closedDates: string[];
     }>({
         openTime: '',
         closeTime: '',
+        ranges: [],
         closedDates: []
     });
 
@@ -61,6 +71,51 @@ export default function AdminPage() {
     // Delivery Zones State
     const [deliveryZones, setDeliveryZones] = useState<{ id: string, name: string; price: number }[]>([]);
     const [deliveryEnabled, setDeliveryEnabled] = useState(true);
+
+    // Logistics / Delay State
+    const [delayTime, setDelayTime] = useState(0); // Minutes
+    const [autoDelay, setAutoDelay] = useState(false);
+    const [lastAutoUpdate, setLastAutoUpdate] = useState(0); // Timestamp to prevent spamming updates
+
+    // Bulk Edit State
+    const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+    const [bulkPercentage, setBulkPercentage] = useState<string>('');
+    const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
+    // Automatic Delay Monitor
+    useEffect(() => {
+        if (!autoDelay) return;
+        const interval = setInterval(async () => {
+            const now = Date.now();
+            let redCount = 0;
+            const pendingOrders = orders.filter(o => o.status !== 'paid');
+
+            pendingOrders.forEach(o => {
+                const created = new Date(o.created_at).getTime();
+                const elapsed = (now - created) / 60000;
+                if (elapsed > 30) redCount++;
+            });
+
+            if (redCount >= 3 && (now - lastAutoUpdate > 900000)) {
+                const newDelay = delayTime < 30 ? 30 : delayTime + 15;
+                setDelayTime(newDelay);
+                setLastAutoUpdate(now);
+
+                const { updateStoreSettings } = await import('@/actions/settingsActions');
+                await updateStoreSettings({
+                    ...storeInfo.settings,
+                    store_name: storeInfo.store_name,
+                    delayTime: newDelay,
+                    autoDelayEnabled: true
+                });
+
+                alert(`⚠️ ALERTA DE COCINA: Se detectaron ${redCount} pedidos con demora. Se ha aumentado el tiempo de espera a ${newDelay} min.`);
+            }
+
+        }, 30000);
+
+        return () => clearInterval(interval);
+    }, [orders, autoDelay, delayTime, lastAutoUpdate, storeInfo]);
 
     // Image Upload State
     const [imageUrl, setImageUrl] = useState('');
@@ -83,7 +138,6 @@ export default function AdminPage() {
     }, []);
 
     useEffect(() => {
-        // Initial Data Load
         async function init() {
             setLoading(true);
             try {
@@ -97,9 +151,19 @@ export default function AdminPage() {
                     setCategories(info.categories);
                 }
                 if (info.schedule) {
+                    let initialRanges = Array.isArray(info.schedule.ranges) ? info.schedule.ranges : [];
+                    if (initialRanges.length === 0 && info.schedule.openTime && info.schedule.closeTime) {
+                        initialRanges = [{
+                            id: Date.now().toString(),
+                            open: info.schedule.openTime,
+                            close: info.schedule.closeTime
+                        }];
+                    }
+
                     setSchedule({
                         openTime: info.schedule.openTime || '',
                         closeTime: info.schedule.closeTime || '',
+                        ranges: initialRanges,
                         closedDates: Array.isArray(info.schedule.closedDates) ? info.schedule.closedDates : []
                     });
                 }
@@ -109,6 +173,9 @@ export default function AdminPage() {
                 if (info.deliveryEnabled !== undefined) {
                     setDeliveryEnabled(info.deliveryEnabled);
                 }
+                if (info.delayTime !== undefined) setDelayTime(info.delayTime);
+                if (info.autoDelayEnabled !== undefined) setAutoDelay(info.autoDelayEnabled);
+
             } catch (err) {
                 console.error(err);
             } finally {
@@ -126,7 +193,34 @@ export default function AdminPage() {
 
     // Real-time Orders
     useEffect(() => {
-        if (!storeInfo || activeTab !== 'orders' || !supabase) return;
+        if (!storeInfo || !supabase) return;
+
+        // Function to play beep sound
+        const playBeep = () => {
+            try {
+                const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+
+                console.log('🔊 Sonido reproducido exitosamente');
+                setSoundEnabled(true);
+            } catch (e) {
+                console.warn("⚠️ No se pudo reproducir el sonido:", e);
+            }
+        };
 
         console.log("🔌 Iniciando conexión Realtime para tienda:", storeInfo.id);
         const channel = supabase
@@ -134,9 +228,31 @@ export default function AdminPage() {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeInfo.id}` },
-                (payload) => {
+                async (payload) => {
                     console.log('🔔 Cambio en pedidos detectado:', payload);
-                    getRecentOrders().then(setOrders);
+
+                    if (payload.eventType === 'INSERT') {
+                        // Play beep sound for new orders
+                        if (soundEnabled) {
+                            playBeep();
+                        }
+
+                        // Show visual alert banner
+                        setNewOrderAlert(true);
+                        setTimeout(() => setNewOrderAlert(false), 5000);
+
+                        // Visual notification
+                        if (typeof window !== 'undefined' && document.hidden) {
+                            document.title = '🔔 NUEVO PEDIDO - LoyalApp';
+                            setTimeout(() => {
+                                document.title = 'LoyalApp - Admin';
+                            }, 5000);
+                        }
+                    }
+
+                    if (activeTab === 'orders') {
+                        getRecentOrders().then(setOrders);
+                    }
                 }
             )
             .subscribe((status) => {
@@ -146,7 +262,7 @@ export default function AdminPage() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [storeInfo, activeTab]);
+    }, [storeInfo, activeTab, soundEnabled]);
 
     const loadData = async () => {
         setLoading(true);
@@ -157,8 +273,8 @@ export default function AdminPage() {
             const data = await getAdminProducts();
             setProducts(data);
         } else if (activeTab === 'stats') {
-            const data = await getSalesRanking(rankingPeriod);
-            setRanking(data);
+            const data = await getAdminStats(rankingPeriod);
+            setStats(data);
         } else if (activeTab === 'customers') {
             const data = await getCustomers();
             setCustomers(data);
@@ -210,18 +326,8 @@ export default function AdminPage() {
             <h2 className="text-2xl font-bold text-gray-800 mb-2">No se encontró tu tienda</h2>
             <p className="text-gray-600 mb-6">Parece que no tienes una tienda configurada o hubo un error cargándola.</p>
             <div className="flex gap-4">
-                <button
-                    onClick={() => window.location.reload()}
-                    className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition"
-                >
-                    Reintentar
-                </button>
-                <button
-                    onClick={() => router.push('/setup')}
-                    className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition"
-                >
-                    Crear Tienda
-                </button>
+                <button onClick={() => window.location.reload()} className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition">Reintentar</button>
+                <button onClick={() => router.push('/setup')} className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition">Crear Tienda</button>
             </div>
         </div>
     );
@@ -258,13 +364,13 @@ export default function AdminPage() {
                     )}
                 </div>
                 <div className="flex gap-2 sm:gap-4 overflow-x-auto">
-                    {(['orders', 'products', 'customers', 'stats', 'settings'] as const).map(tab => (
+                    {(['orders', 'products', 'customers', 'stats', 'settings', 'help'] as const).map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition capitalize ${activeTab === tab ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'}`}
                         >
-                            {tab === 'stats' ? 'Estadísticas' : tab === 'settings' ? 'Configuración' : tab === 'orders' ? 'Pedidos' : tab === 'products' ? 'Productos' : 'Clientes'}
+                            {tab === 'stats' ? 'Estadísticas' : tab === 'settings' ? 'Configuración' : tab === 'orders' ? 'Pedidos' : tab === 'products' ? 'Productos' : tab === 'customers' ? 'Clientes' : 'Ayuda 💡'}
                         </button>
                     ))}
                     <button
@@ -275,6 +381,13 @@ export default function AdminPage() {
                     </button>
                 </div>
             </nav>
+
+            {/* New Order Alert Banner */}
+            {newOrderAlert && (
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 text-center font-bold text-lg animate-pulse shadow-lg">
+                    🔔 ¡NUEVO PEDIDO RECIBIDO! 🍕
+                </div>
+            )}
 
             {/* Trial Banner */}
             {storeInfo?.trial_ends_at && (
@@ -305,8 +418,12 @@ export default function AdminPage() {
 
                         <div className="bg-gray-50 p-4 rounded-xl mb-6 text-left">
                             <div className="flex justify-between items-center mb-2">
-                                <span className="font-bold text-gray-900">Plan Profesional</span>
-                                <span className="font-bold text-lg text-orange-600">$60.000</span>
+                                <span className="font-bold text-gray-900">
+                                    {storeInfo?.settings?.promo_used ? 'Plan Profesional' : 'Plan Profesional (Promo)'}
+                                </span>
+                                <span className="font-bold text-lg text-orange-600">
+                                    {storeInfo?.settings?.promo_used ? '$60.000' : '$35.000'}
+                                </span>
                             </div>
                             <ul className="text-sm text-gray-500 space-y-1">
                                 <li>✅ Pedidos Ilimitados</li>
@@ -338,196 +455,489 @@ export default function AdminPage() {
                 </div>
             ) : (
                 <main className="max-w-7xl mx-auto p-6">
-                    {loading && activeTab !== 'orders' ? ( // Don't show global loading for orders as we have realtime
-                        <div className="py-20 text-center text-gray-500">Cargando datos...</div>
-                    ) : (
-                        <>
-                            {activeTab === 'orders' && (
-                                <div className="space-y-6">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h2 className="text-2xl font-bold text-gray-800">Pedidos Recientes</h2>
-                                        {orders.length > 0 && (
+                    {activeTab === 'orders' && (
+                        <div className="space-y-6">
+                            {/* Logistics Control Panel */}
+                            <div className="bg-white p-5 rounded-xl shadow-sm border border-orange-100 mb-6">
+                                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                            ⏱️ Gestión de Demora
+                                            {delayTime > 0 && <span className="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full">Activa</span>}
+                                        </h3>
+                                        <p className="text-sm text-gray-500">Tiempo extra que se suma al estimado de envío.</p>
+                                    </div>
+
+                                    <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg">
+                                        <div className="text-center min-w-[80px]">
+                                            <span className="block text-2xl font-bold text-orange-600">{delayTime} min</span>
+                                            <span className="text-xs text-gray-400">Demora Actual</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={async () => {
+                                                    const newDelay = Math.max(0, delayTime - 15);
+                                                    setDelayTime(newDelay);
+                                                    const { updateStoreSettings } = await import('@/actions/settingsActions');
+                                                    await updateStoreSettings({ ...storeInfo.settings, store_name: storeInfo.store_name, delayTime: newDelay });
+                                                }}
+                                                className="w-10 h-10 rounded-full bg-white border hover:bg-gray-100 font-bold text-gray-600 transition"
+                                            >-15</button>
+                                            <button
+                                                onClick={async () => {
+                                                    const newDelay = delayTime + 15;
+                                                    setDelayTime(newDelay);
+                                                    const { updateStoreSettings } = await import('@/actions/settingsActions');
+                                                    await updateStoreSettings({ ...storeInfo.settings, store_name: storeInfo.store_name, delayTime: newDelay });
+                                                }}
+                                                className="w-10 h-10 rounded-full bg-orange-600 hover:bg-orange-700 text-white font-bold transition shadow-lg shadow-orange-200"
+                                            >+15</button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 border-l pl-4">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={autoDelay}
+                                                onChange={async (e) => {
+                                                    const checked = e.target.checked;
+                                                    setAutoDelay(checked);
+                                                    const { updateStoreSettings } = await import('@/actions/settingsActions');
+                                                    await updateStoreSettings({ ...storeInfo.settings, store_name: storeInfo.store_name, autoDelayEnabled: checked });
+                                                }}
+                                                className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500"
+                                            />
+                                            <span className="text-sm font-medium text-gray-700">Auto-Ajuste</span>
+                                        </label>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    // Create and load audio
+                                                    const bell = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3');
+                                                    bell.volume = 0.8;
+
+                                                    // Try to play
+                                                    await bell.play();
+
+                                                    // Success
+                                                    setSoundEnabled(true);
+                                                    alert("✅ ¡Sonido activado! Ahora recibirás notificaciones sonoras cuando lleguen nuevos pedidos.");
+                                                } catch (error) {
+                                                    console.error("Error al activar sonido:", error);
+
+                                                    // Try alternative approach with AudioContext
+                                                    try {
+                                                        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                                                        await audioContext.resume();
+
+                                                        const bell = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3');
+                                                        bell.volume = 0.8;
+                                                        await bell.play();
+
+                                                        setSoundEnabled(true);
+                                                        alert("✅ ¡Sonido activado! Ahora recibirás notificaciones sonoras cuando lleguen nuevos pedidos.");
+                                                    } catch (retryError) {
+                                                        console.error("Error en segundo intento:", retryError);
+                                                        // Force enable anyway - the sound will work on next order
+                                                        setSoundEnabled(true);
+                                                        alert("⚠️ Configuración de sonido guardada.\n\n" +
+                                                            "Si no escuchaste el sonido de prueba:\n" +
+                                                            "1. Verifica que el volumen de tu dispositivo esté activado\n" +
+                                                            "2. Haz clic en el ícono 🔒 en la barra de direcciones\n" +
+                                                            "3. Permite el sonido para este sitio\n\n" +
+                                                            "El sonido funcionará cuando llegue el próximo pedido.");
+                                                    }
+                                                }
+                                            }}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all border font-medium ${soundEnabled
+                                                ? 'bg-green-50 text-green-700 border-green-200'
+                                                : 'bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100 animate-pulse'
+                                                }`}
+                                        >
+                                            {soundEnabled ? (
+                                                <>
+                                                    <span className="text-xl">🔊</span>
+                                                    <span>Sonido Activo</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="text-xl">🔔</span>
+                                                    <span>¡Haz clic para activar notificaciones!</span>
+                                                </>
+                                            )}
+                                        </button>
+                                        {soundEnabled && (
                                             <button
                                                 onClick={() => {
-                                                    setConfirmation({
-                                                        message: '⚠️ ¿Limpiar pedidos recientes? (Se archivarán)',
-                                                        onConfirm: async () => {
-                                                            await clearAllOrders();
-                                                            loadData();
-                                                        }
-                                                    });
+                                                    try {
+                                                        // Create beep sound using Web Audio API
+                                                        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                                                        const oscillator = audioContext.createOscillator();
+                                                        const gainNode = audioContext.createGain();
+
+                                                        oscillator.connect(gainNode);
+                                                        gainNode.connect(audioContext.destination);
+
+                                                        // Configure beep sound
+                                                        oscillator.frequency.value = 800; // Frequency in Hz
+                                                        oscillator.type = 'sine';
+
+                                                        // Volume envelope
+                                                        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                                                        gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+                                                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                                                        // Play beep
+                                                        oscillator.start(audioContext.currentTime);
+                                                        oscillator.stop(audioContext.currentTime + 0.5);
+
+                                                        alert("🔊 ¡Sonido reproducido!\n\nSi escuchaste un 'BEEP', todo funciona correctamente.\n\nCuando llegue un pedido, escucharás este mismo sonido.");
+                                                    } catch (err) {
+                                                        console.error("Error reproduciendo sonido:", err);
+                                                        alert("⚠️ Error al reproducir sonido.\n\nIntenta:\n1. Recargar la página\n2. Usar Chrome o Firefox\n3. Verificar que el volumen esté alto");
+                                                    }
                                                 }}
-                                                className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-3 py-1 rounded hover:bg-red-50 transition"
+                                                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition font-medium text-sm"
                                             >
-                                                🗑 Limpiar Todo
+                                                <span>🔊</span>
+                                                <span>Probar Sonido</span>
                                             </button>
                                         )}
                                     </div>
-                                    <div className="grid gap-4">
-                                        {orders.map((order) => (
-                                            <div key={order.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between gap-4">
-                                                <div>
-                                                    <div className="flex items-center gap-3 mb-2">
-                                                        <span className="font-bold text-lg text-gray-900">{order.customers?.name || 'Cliente'}</span>
-                                                        <span className="text-sm text-gray-500 px-2 py-1 bg-gray-100 rounded-full">
-                                                            {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString()}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-sm text-gray-500 mb-2">
-                                                        {Array.isArray(order.details) && order.details.map((item: any, idx: number) => (
-                                                            <div key={idx} className="flex gap-1">
-                                                                <span>{item.quantity}x</span>
-                                                                <span>{item.product.name}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                    <p className="text-gray-600 mb-1 flex items-center gap-1">
-                                                        📞 {order.customers?.phone}
-                                                        <a href={`https://wa.me/${order.customers?.phone}`} target="_blank" className="text-green-600 hover:underline text-xs ml-2">Chat</a>
-                                                    </p>
-                                                    <p className="text-gray-600 mb-2">{order.delivery_method === 'delivery' ? `🛵 Envío a: ${order.delivery_address}` : '🏃 Retiro en Local'}</p>
-                                                </div>
-                                                <div className="flex flex-col items-end justify-center gap-2">
-                                                    <span className="text-2xl font-bold text-green-600">${order.total_amount?.toLocaleString('es-AR')}</span>
-                                                    <div className="flex items-center gap-2">
-                                                        {order.delivery_method === 'delivery' && (
-                                                            <a
-                                                                href={`https://wa.me/${order.customers?.phone}?text=${encodeURIComponent(`Hola ${order.customers?.name || ''}, ¡tu pedido salió en camino! 🛵🍕`)}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition flex items-center gap-1 shadow-sm no-underline"
-                                                            >
-                                                                🛵 Avisar salida
-                                                            </a>
-                                                        )}
-                                                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${order.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                            {order.status === 'paid' ? 'Pagado' : 'Pendiente'}
-                                                        </span>
-                                                        {order.status !== 'paid' && (
-                                                            <button
-                                                                onClick={async () => {
-                                                                    await updateOrderStatus(order.id, 'paid');
-                                                                    loadData();
-                                                                }}
-                                                                className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition"
-                                                            >
-                                                                ✔ Cobrar
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {orders.length === 0 && <p className="text-gray-500 text-center py-10">Esperando pedidos...</p>}
-                                    </div>
                                 </div>
-                            )}
+                            </div>
 
-                            {activeTab === 'products' && (
-                                <div>
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h2 className="text-2xl font-bold text-gray-800">Mis Productos</h2>
-                                        <button onClick={handleCreateNew} className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg shadow-sm font-medium transition">+ Nuevo Producto</button>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {products.map((product) => (
-                                            <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative group">
-                                                <div className="h-48 relative bg-gray-100">
-                                                    {product.image_url && <Image src={product.image_url} alt={product.name} fill className="object-cover" />}
-                                                </div>
-                                                <div className="p-4">
-                                                    <h3 className="font-bold text-gray-900">{product.name}</h3>
-                                                    <p className="text-sm text-gray-500 mb-2 capitalize">{product.category_id.replace('-', ' ')}</p>
-                                                    <div className="flex justify-between items-center mb-3">
-                                                        <span className="font-bold text-lg">${product.base_price?.toLocaleString('es-AR')}</span>
-                                                        <button onClick={() => handleToggle(product.id, product.is_available)} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${product.is_available !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
-                                                            {product.is_available !== false ? 'Disponible' : 'Agotado'}
-                                                        </button>
-                                                    </div>
-                                                    <div className="flex gap-2 pt-2 border-t border-gray-100">
-                                                        <button onClick={() => handleEditProduct(product)} className="flex-1 bg-blue-50 text-blue-600 text-sm font-medium py-1.5 rounded hover:bg-blue-100 transition flex items-center justify-center gap-1">
-                                                            ✏️ Editar
-                                                        </button>
-                                                        <button onClick={() => handleDeleteProduct(product.id)} className="flex-1 bg-red-50 text-red-600 text-sm font-medium py-1.5 rounded hover:bg-red-100 transition flex items-center justify-center gap-1">
-                                                            🗑 Eliminar
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-2xl font-bold text-gray-800">Pedidos Recientes</h2>
+                                {orders.length > 0 && (
+                                    <button
+                                        onClick={() => {
+                                            setConfirmation({
+                                                message: '⚠️ ¿Limpiar pedidos recientes? (Se archivarán)',
+                                                onConfirm: async () => {
+                                                    await clearAllOrders();
+                                                    loadData();
+                                                }
+                                            });
+                                        }}
+                                        className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-3 py-1 rounded hover:bg-red-50 transition"
+                                    >
+                                        🗑 Limpiar Todo
+                                    </button>
+                                )}
+                            </div>
+                            <div className="grid gap-4">
+                                <OrdersList orders={orders} updateOrderStatus={updateOrderStatus} archiveOrder={archiveOrder} loadData={loadData} />
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'products' && (
+                        <div>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold text-gray-800">Mis Productos</h2>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            if (selectedProducts.size === products.length) {
+                                                setSelectedProducts(new Set());
+                                            } else {
+                                                setSelectedProducts(new Set(products.map(p => p.id)));
+                                            }
+                                        }}
+                                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition"
+                                    >
+                                        {selectedProducts.size > 0 && selectedProducts.size === products.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
+                                    </button>
+                                    <button onClick={handleCreateNew} className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg shadow-sm font-medium transition">+ Nuevo Producto</button>
                                 </div>
-                            )}
-
-                            {activeTab === 'customers' && (
-                                <div>
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h2 className="text-2xl font-bold text-gray-800">Clientes ({customers.length})</h2>
+                            </div>
+                            {selectedProducts.size > 0 && (
+                                <div className="sticky top-4 z-40 bg-white border-2 border-orange-500 shadow-xl rounded-xl p-4 mb-6 flex items-center justify-between animate-in slide-in-from-top-2">
+                                    <div className="flex items-center gap-4">
+                                        <span className="bg-orange-600 text-white px-3 py-1 rounded-full font-bold text-sm">
+                                            {selectedProducts.size} seleccionados
+                                        </span>
                                         <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => {
-                                                    setConfirmation({
-                                                        message: '⚠️ ¿Borrar TODOS los clientes? Esta acción es irreversible.',
-                                                        onConfirm: async () => {
-                                                            await clearAllCustomers();
-                                                            loadData();
-                                                        }
-                                                    });
-                                                }}
-                                                className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-3 py-1 rounded hover:bg-red-50 mr-2 transition"
-                                            >
-                                                🗑 Limpiar Todo
-                                            </button>
-                                            <button
-                                                onClick={() => setShowInactiveOnly(!showInactiveOnly)}
-                                                className={`px-3 py-1 rounded-full text-sm font-medium transition ${showInactiveOnly ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                                            >
-                                                {showInactiveOnly ? 'Mostrando Inactivos' : 'Mostrar Inactivos'}
-                                            </button>
+                                            <span className="text-gray-700 font-medium">Aumentar Precios:</span>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    value={bulkPercentage}
+                                                    onChange={(e) => setBulkPercentage(e.target.value)}
+                                                    placeholder="10"
+                                                    className="w-20 border border-gray-300 rounded-lg py-1 px-2 text-right font-bold focus:ring-2 focus:ring-orange-500 outline-none"
+                                                />
+                                                <span className="absolute right-7 top-1.5 text-gray-400 font-bold">%</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                                        {/* Simple list or table */}
-                                        {filteredCustomers.map(c => {
-                                            const isInactive = c.daysSinceLastOrder > 20;
-                                            const message = isInactive
-                                                ? `Hola ${c.name}, ¡te extrañamos! 🏃‍♂️💨\n\nHace mucho que no pasas por aquí. Te dejamos un descuento especial para hoy 🎁.\n\nPide aquí: ${typeof window !== 'undefined' ? window.location.origin : ''}/${storeInfo.slug}`
-                                                : `Hola ${c.name}, ¡gracias por elegirnos siempre! 🍕`;
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setSelectedProducts(new Set())}
+                                            className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-100 rounded-lg transition"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                if (!bulkPercentage || isNaN(Number(bulkPercentage))) return alert("Ingresa un porcentaje válido");
+                                                if (!confirm(`¿Estás seguro de aumentar un ${bulkPercentage}% el precio de ${selectedProducts.size} productos?`)) return;
 
-                                            return (
-                                                <div key={c.id} className="p-4 border-b border-gray-100 hover:bg-gray-50 flex justify-between items-center group">
-                                                    <div>
-                                                        <p className="font-bold text-gray-900 flex items-center gap-2">
-                                                            {c.name}
-                                                            <a
-                                                                href={`https://wa.me/${c.phone}?text=${encodeURIComponent(message)}`}
-                                                                target="_blank"
-                                                                className="bg-green-100 text-green-700 p-1.5 rounded-full hover:bg-green-200 transition-colors"
-                                                                title={isInactive ? "Enviar promo de recuperación" : "Enviar mensaje"}
-                                                            >
-                                                                💬
-                                                            </a>
-                                                        </p>
-                                                        <p className="text-sm text-gray-500">{c.phone}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="font-bold text-sm">${c.totalSpent.toLocaleString('es-AR')}</p>
-                                                        <p className="text-xs text-gray-500">{c.totalOrders} pedidos</p>
-                                                        <p className={`text-xs ${isInactive ? 'text-red-500 font-bold' : 'text-green-600'}`}>
-                                                            Hace {c.daysSinceLastOrder} días
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                                setIsBulkUpdating(true);
+                                                const res = await bulkUpdateProductPrices(Array.from(selectedProducts), Number(bulkPercentage));
+                                                setIsBulkUpdating(false);
+
+                                                if (res.success) {
+                                                    alert(res.message);
+                                                    setSelectedProducts(new Set());
+                                                    setBulkPercentage('');
+                                                    loadData();
+                                                } else {
+                                                    alert("Error: " + res.message);
+                                                }
+                                            }}
+                                            disabled={isBulkUpdating || !bulkPercentage}
+                                            className="bg-orange-600 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-bold shadow-md hover:scale-105 transition transform"
+                                        >
+                                            {isBulkUpdating ? 'Actualizando...' : 'Aplicar Aumento'}
+                                        </button>
                                     </div>
                                 </div>
                             )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {products.map((product) => (
+                                    <div
+                                        key={product.id}
+                                        className={`rounded-xl shadow-sm border overflow-hidden relative group transition-all cursor-pointer ${selectedProducts.has(product.id) ? 'ring-2 ring-orange-500 border-orange-500 bg-orange-50' : 'bg-white border-gray-100 hover:shadow-md'}`}
+                                        onClick={(e) => {
+                                            // Allow clicking anywhere on card to select, unless clicking a button
+                                            if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('button')) return;
+                                            const newSet = new Set(selectedProducts);
+                                            if (newSet.has(product.id)) newSet.delete(product.id);
+                                            else newSet.add(product.id);
+                                            setSelectedProducts(newSet);
+                                        }}
+                                    >
+                                        <div className="absolute top-2 left-2 z-10">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedProducts.has(product.id)}
+                                                onChange={() => { }} // Handled by parent click
+                                                className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 cursor-pointer shadow-sm border-gray-300"
+                                            />
+                                        </div>
+                                        <div className="h-48 relative bg-gray-100">
+                                            {product.image_url && <Image src={product.image_url} alt={product.name} fill className="object-cover" />}
+                                        </div>
+                                        <div className="p-4">
+                                            <h3 className="font-bold text-gray-900">{product.name}</h3>
+                                            <p className="text-sm text-gray-500 mb-2 capitalize">{product.category_id.replace('-', ' ')}</p>
+                                            <div className="flex justify-between items-center mb-3">
+                                                <span className="font-bold text-lg">${product.base_price?.toLocaleString('es-AR')}</span>
+                                                <button onClick={() => handleToggle(product.id, product.is_available)} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${product.is_available !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
+                                                    {product.is_available !== false ? 'Disponible' : 'Agotado'}
+                                                </button>
+                                            </div>
+                                            <div className="flex gap-2 pt-2 border-t border-gray-100">
+                                                <button onClick={() => handleEditProduct(product)} className="flex-1 bg-blue-50 text-blue-600 text-sm font-medium py-1.5 rounded hover:bg-blue-100 transition flex items-center justify-center gap-1">
+                                                    ✏️ Editar
+                                                </button>
+                                                <button onClick={() => handleDeleteProduct(product.id)} className="flex-1 bg-red-50 text-red-600 text-sm font-medium py-1.5 rounded hover:bg-red-100 transition flex items-center justify-center gap-1">
+                                                    🗑 Eliminar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-                            {activeTab === 'stats' && (
+                    {activeTab === 'customers' && (
+                        <div>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold text-gray-800">Clientes ({customers.length})</h2>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            setConfirmation({
+                                                message: '⚠️ ¿Borrar TODOS los clientes? Esta acción es irreversible.',
+                                                onConfirm: async () => {
+                                                    await clearAllCustomers();
+                                                    loadData();
+                                                }
+                                            });
+                                        }}
+                                        className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-3 py-1 rounded hover:bg-red-50 mr-2 transition"
+                                    >
+                                        🗑 Limpiar Todo
+                                    </button>
+                                    <button
+                                        onClick={() => setShowInactiveOnly(!showInactiveOnly)}
+                                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${showInactiveOnly ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                    >
+                                        {showInactiveOnly ? 'Mostrando Inactivos' : 'Mostrar Inactivos'}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                {filteredCustomers.map(c => {
+                                    const isInactive = c.daysSinceLastOrder > 20;
+                                    const message = isInactive
+                                        ? `Hola ${c.name}, ¡te extrañamos! 🏃‍♂️💨\n\nHace mucho que no pasas por aquí. Te dejamos un descuento especial para hoy 🎁.\n\nPide aquí: ${typeof window !== 'undefined' ? window.location.origin : ''}/${storeInfo.slug}`
+                                        : `Hola ${c.name}, ¡gracias por elegirnos siempre! 🍕`;
+
+                                    return (
+                                        <div key={c.id} className="p-4 border-b border-gray-100 hover:bg-gray-50 flex justify-between items-center group">
+                                            <div>
+                                                <p className="font-bold text-gray-900 flex items-center gap-2">
+                                                    {c.name}
+                                                    <a
+                                                        href={`https://wa.me/${c.phone}?text=${encodeURIComponent(message)}`}
+                                                        target="_blank"
+                                                        className="bg-green-100 text-green-700 p-1.5 rounded-full hover:bg-green-200 transition-colors"
+                                                        title={isInactive ? "Enviar promo de recuperación" : "Enviar mensaje"}
+                                                    >
+                                                        💬
+                                                    </a>
+                                                </p>
+                                                <p className="text-sm text-gray-500">{c.phone}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-bold text-sm">${c.totalSpent.toLocaleString('es-AR')}</p>
+                                                <p className="text-xs text-gray-500">{c.totalOrders} pedidos</p>
+                                                <p className={`text-xs ${isInactive ? 'text-red-500 font-bold' : 'text-green-600'}`}>
+                                                    Hace {c.daysSinceLastOrder} días
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'stats' && (
+                        <div className="space-y-8">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                 <div>
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h2 className="text-2xl font-bold text-gray-800">Estadísticas</h2>
+                                    <h2 className="text-2xl font-bold text-gray-800">Panel de Rendimiento</h2>
+                                    <p className="text-gray-500 text-sm">Monitorea el crecimiento de tu negocio en tiempo real.</p>
+                                </div>
+                                <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                                    {[
+                                        { id: 'day', label: 'Hoy' },
+                                        { id: 'week', label: 'Semana' },
+                                        { id: 'month', label: 'Mes' }
+                                    ].map((p) => (
+                                        <button
+                                            key={p.id}
+                                            onClick={() => setRankingPeriod(p.id as any)}
+                                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${rankingPeriod === p.id ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            {p.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Metric Cards */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                                    <span className="text-gray-500 text-sm font-medium mb-1">Ventas Totales</span>
+                                    <span className="text-2xl font-bold text-green-600">${stats.totalRevenue.toLocaleString('es-AR')}</span>
+                                    <div className="mt-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full self-start">Ingresos Brutos</div>
+                                </div>
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                                    <span className="text-gray-500 text-sm font-medium mb-1">Total Pedidos</span>
+                                    <span className="text-2xl font-bold text-blue-600">{stats.totalOrders}</span>
+                                    <div className="mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full self-start">Gestionados</div>
+                                </div>
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                                    <span className="text-gray-500 text-sm font-medium mb-1">Ticket Promedio</span>
+                                    <span className="text-2xl font-bold text-orange-600">${stats.averageTicket.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                                    <div className="mt-2 text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full self-start">Por Cliente</div>
+                                </div>
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                                    <span className="text-gray-500 text-sm font-medium mb-1">Logística</span>
+                                    <div className="flex items-center gap-4 mt-1">
+                                        <div className="text-center">
+                                            <span className="block text-lg font-bold text-gray-800">{stats.deliveryStats.delivery}</span>
+                                            <span className="text-[10px] text-gray-400 uppercase">🛵 Envío</span>
+                                        </div>
+                                        <div className="w-px h-8 bg-gray-100"></div>
+                                        <div className="text-center">
+                                            <span className="block text-lg font-bold text-gray-800">{stats.deliveryStats.pickup}</span>
+                                            <span className="text-[10px] text-gray-400 uppercase">🏃 Retiro</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                {/* Ranking Visual */}
+                                <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                        🏆 Productos más Vendidos
+                                    </h3>
+                                    <div className="space-y-6">
+                                        {stats.ranking.length > 0 ? (
+                                            stats.ranking.map((item: any, idx: number) => {
+                                                const maxQty = stats.ranking[0].quantity;
+                                                const percentage = (item.quantity / maxQty) * 100;
+                                                return (
+                                                    <div key={idx} className="space-y-2">
+                                                        <div className="flex justify-between items-center text-sm">
+                                                            <span className="font-medium text-gray-700">{item.name}</span>
+                                                            <span className="text-gray-500">{item.quantity} unidades • <span className="font-bold text-gray-900">${item.revenue.toLocaleString('es-AR')}</span></span>
+                                                        </div>
+                                                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                                            <div
+                                                                className="h-full bg-orange-500 rounded-full transition-all duration-1000"
+                                                                style={{ width: `${percentage}%` }}
+                                                            ></div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <p className="text-center py-10 text-gray-400 italic">No hay datos suficientes para el período seleccionado.</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Distribution / Pie placeholder */}
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-6">Método de Entrega</h3>
+                                    <div className="flex flex-col items-center justify-center h-[200px] relative">
+                                        {stats.totalOrders > 0 ? (
+                                            <>
+                                                {/* Simple CSS-based donut/chart representation */}
+                                                <div className="w-32 h-32 rounded-full border-[16px] border-orange-500 flex items-center justify-center relative">
+                                                    <div className="text-center">
+                                                        <span className="block text-2xl font-bold text-gray-800">{Math.round((stats.deliveryStats.delivery / stats.totalOrders) * 100)}%</span>
+                                                        <span className="text-[10px] text-gray-400 uppercase">Delivery</span>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-8 grid grid-cols-2 gap-4 w-full text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                                                        <span className="text-gray-600">Envío ({stats.deliveryStats.delivery})</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-3 h-3 bg-gray-200 rounded-full"></div>
+                                                        <span className="text-gray-600">Retiro ({stats.deliveryStats.pickup})</span>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <p className="text-gray-400 text-sm">Sin pedidos registrados</p>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-8 pt-6 border-t border-gray-100">
                                         <button
                                             onClick={() => {
                                                 setConfirmation({
@@ -538,451 +948,49 @@ export default function AdminPage() {
                                                     }
                                                 });
                                             }}
-                                            className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-3 py-1 rounded hover:bg-red-50 transition"
+                                            className="w-full text-red-500 hover:text-red-700 text-xs font-semibold py-2 transition rounded hover:bg-red-50"
                                         >
-                                            📉 Limpiar Estadísticas
+                                            📉 Reiniciar Historial
                                         </button>
                                     </div>
-                                    {/* Simple Stats View */}
-                                    <div className="flex gap-2 mb-4">
-                                        {[
-                                            { id: 'day', label: 'Día' },
-                                            { id: 'week', label: 'Semana' },
-                                            { id: 'month', label: 'Mes' }
-                                        ].map((p) => (
-                                            <button key={p.id} onClick={() => setRankingPeriod(p.id as any)} className={`px-3 py-1 rounded capitalize ${rankingPeriod === p.id ? 'bg-orange-500 text-white' : 'bg-gray-200'}`}>{p.label}</button>
-                                        ))}
-                                    </div>
-                                    <div className="bg-white p-6 rounded-xl shadow-sm">
-                                        <h3 className="text-lg font-bold mb-4">Ranking de Ventas</h3>
-                                        <ul>
-                                            {ranking.map((item, idx) => (
-                                                <li key={idx} className="flex justify-between py-2 border-b border-gray-100 last:border-0">
-                                                    <span>{item.quantity}x {item.name}</span>
-                                                    <span className="font-bold">${item.revenue.toLocaleString('es-AR')}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
                                 </div>
-                            )}
-
-                            {activeTab === 'settings' && storeInfo && (
-                                <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-                                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Configuración</h2>
-                                    <form action={async (formData) => {
-                                        const newSettings = {
-                                            store_name: formData.get('store_name'),
-                                            address: formData.get('address'),
-                                            phone: formData.get('phone'),
-                                            logo_url: formData.get('logo_url'),
-                                            primary_color: formData.get('primary_color'),
-                                            categories: categories,
-                                            schedule: schedule,
-                                            deliveryZones: deliveryZones,
-                                            deliveryEnabled: deliveryEnabled
-                                        };
-                                    };
-
-                                    const res = await updateStoreSettings(newSettings);
-                                    if (res.success) alert('Guardado!');
-                                    else alert(res.message);
-                                    }} className="space-y-4">
-                                    <div><label className="text-sm font-bold">Nombre</label><input name="store_name" defaultValue={storeInfo.store_name} className="w-full border p-2 rounded" /></div>
-                                    <div><label className="text-sm font-bold">Dirección</label><input name="address" defaultValue={storeInfo.address} className="w-full border p-2 rounded" /></div>
-                                    <div><label className="text-sm font-bold">Teléfono/WhatsApp</label><input name="phone" defaultValue={storeInfo.phone} className="w-full border p-2 rounded" /></div>
-
-                                    <div>
-                                        <label className="text-sm font-bold block mb-1">Logo URL</label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                name="logo_url"
-                                                defaultValue={storeInfo.logo_url}
-                                                className="flex-1 border p-2 rounded"
-                                                id="logo-input" // Add ID to target with JS if needed, though we use defaultValue here. 
-                                            // Actually, for consistency with the other form, let's use controlled component ONLY if we want immediate preview update.
-                                            // But since the original form uses uncontrolled inputs (formData), we can just update the input's value using ref or direct manipulation? 
-                                            // Easier: Modify the form to be controlled? No, keep it uncontrolled but use state for the image URL input to support the upload button filling it.
-                                            // Let's use a small local component or just useState inside the map.
-                                            // Since we are inside the main AdminPage component, we can add a new state for logoUrl.
-                                            />
-                                            <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded flex items-center gap-2 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                                <span className="text-xl">📷</span>
-                                                <span className="text-sm font-medium">{uploading ? '...' : 'Subir'}</span>
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    className="hidden"
-                                                    disabled={uploading}
-                                                    onChange={async (e) => {
-                                                        if (e.target.files && e.target.files[0]) {
-                                                            setUploading(true);
-                                                            try {
-                                                                const url = await uploadProductImage(e.target.files[0]);
-                                                                // Update the input value directly since it is uncontrolled for now, or better, force a re-render.
-                                                                // Simplest way for this specific form:
-                                                                const input = document.querySelector('input[name="logo_url"]') as HTMLInputElement;
-                                                                if (input) input.value = url;
-                                                            } catch (err) {
-                                                                alert('Error subiendo imagen: ' + (err as any).message);
-                                                            } finally {
-                                                                setUploading(false);
-                                                            }
-                                                        }
-                                                    }}
-                                                />
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div><label className="text-sm font-bold">Color</label><input name="primary_color" type="color" defaultValue={storeInfo.primary_color || '#f97316'} className="h-10 w-full" /></div>
-
-                                    {/* Schedule Config */}
-                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                        <h4 className="text-md font-bold text-blue-800 mb-4 flex items-center gap-2">
-                                            ⏰ Horarios y Disponibilidad
-                                        </h4>
-
-                                        <div className="grid grid-cols-2 gap-4 mb-4">
-                                            <div>
-                                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Apertura</label>
-                                                <input
-                                                    type="time"
-                                                    value={schedule.openTime}
-                                                    onChange={(e) => setSchedule({ ...schedule, openTime: e.target.value })}
-                                                    className="w-full border p-2 rounded bg-white"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Cierre</label>
-                                                <input
-                                                    type="time"
-                                                    value={schedule.closeTime}
-                                                    onChange={(e) => setSchedule({ ...schedule, closeTime: e.target.value })}
-                                                    className="w-full border p-2 rounded bg-white"
-                                                />
-                                            </div>
-                                        </div>
-                                        <p className="text-xs text-blue-600 mb-4">
-                                            Si dejas los horarios vacíos, la tienda aparecerá siempre "Abierta".
-                                        </p>
-
-                                        <div className="border-t border-blue-200 pt-4">
-                                            <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Fechas Cerradas (Feriados/Vacaciones)</label>
-                                            <div className="flex gap-2 mb-2">
-                                                <input
-                                                    type="date"
-                                                    id="closed-date-picker"
-                                                    className="flex-1 border p-2 rounded text-sm"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const input = document.getElementById('closed-date-picker') as HTMLInputElement;
-                                                        if (input.value && !schedule.closedDates.includes(input.value)) {
-                                                            setSchedule({
-                                                                ...schedule,
-                                                                closedDates: [...schedule.closedDates, input.value].sort()
-                                                            });
-                                                            input.value = '';
-                                                        }
-                                                    }}
-                                                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                                                >
-                                                    Agregar
-                                                </button>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {schedule.closedDates.map((date) => (
-                                                    <span key={date} className="bg-white border border-blue-200 text-blue-800 px-2 py-1 rounded text-xs flex items-center gap-2">
-                                                        {new Date(date + 'T12:00:00').toLocaleDateString()}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setSchedule({
-                                                                ...schedule,
-                                                                closedDates: schedule.closedDates.filter(d => d !== date)
-                                                            })}
-                                                            className="text-red-500 hover:text-red-700 font-bold"
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    </span>
-                                                ))}
-                                                {schedule.closedDates.length === 0 && <span className="text-gray-400 text-xs italic">No hay fechas bloqueadas</span>}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Delivery Zones Config */}
-                                    <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h4 className="text-md font-bold text-orange-800 flex items-center gap-2">
-                                                🛵 Zonas de Envío
-                                            </h4>
-                                            <label className="flex items-center cursor-pointer relative">
-                                                <input
-                                                    type="checkbox"
-                                                    className="sr-only peer"
-                                                    checked={deliveryEnabled}
-                                                    onChange={(e) => setDeliveryEnabled(e.target.checked)}
-                                                />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                                                <span className="ml-3 text-sm font-medium text-orange-900">{deliveryEnabled ? 'Activado' : 'Desactivado'}</span>
-                                            </label>
-                                        </div>
-
-                                        {deliveryEnabled && (
-                                            <>
-                                                <div className="space-y-3 mb-4">
-                                                    {deliveryZones.map((zone, idx) => (
-                                                        <div key={idx} className="flex gap-2 items-center bg-white p-2 rounded shadow-sm">
-                                                            <input
-                                                                placeholder="Nombre Zona (Ej: Centro)"
-                                                                value={zone.name}
-                                                                onChange={(e) => {
-                                                                    const newZones = [...deliveryZones];
-                                                                    newZones[idx].name = e.target.value;
-                                                                    setDeliveryZones(newZones);
-                                                                }}
-                                                                className="flex-1 border p-1 rounded text-sm"
-                                                            />
-                                                            <span className="text-gray-500 font-bold">$</span>
-                                                            <input
-                                                                type="number"
-                                                                placeholder="Precio"
-                                                                value={zone.price}
-                                                                onChange={(e) => {
-                                                                    const newZones = [...deliveryZones];
-                                                                    newZones[idx].price = Number(e.target.value);
-                                                                    setDeliveryZones(newZones);
-                                                                }}
-                                                                className="w-24 border p-1 rounded text-sm"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setDeliveryZones(deliveryZones.filter((_, i) => i !== idx))}
-                                                                className="text-red-500 hover:text-red-700 px-2 font-bold"
-                                                            >
-                                                                ✕
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setDeliveryZones([...deliveryZones, { id: Date.now().toString(), name: '', price: 0 }])}
-                                                        className="bg-orange-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-orange-700 transition w-full"
-                                                    >
-                                                        + Agregar Zona
-                                                    </button>
-                                                </div>
-                                                <p className="text-xs text-orange-600 mt-2">
-                                                    Si agregas zonas, el cliente deberá elegir una al pedir envío a domicilio y el costo se sumará automáticamente.
-                                                </p>
-                                            </div>
-
-                                        {/* Category Management */}
-                                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                            <label className="text-sm font-bold block mb-2">Categorías de Productos</label>
-                                            <div className="space-y-2 mb-3">
-                                                {categories.map((cat, idx) => (
-                                                    <div key={idx} className="flex gap-2 items-center">
-                                                        <input
-                                                            value={cat.name}
-                                                            onChange={(e) => {
-                                                                const newCats = [...categories];
-                                                                newCats[idx].name = e.target.value;
-                                                                // Also update ID if it was auto-generated or allow editing ID? 
-                                                                // Better keep ID stable if possible, but for simple MVP let's just edit name.
-                                                                // Actually for proper keying we should probably not edit ID of existing items easily or it breaks relations if we used ID.
-                                                                // But we use ID as value. Let's assume user just edits display name. 
-                                                                // If they want to change ID (which is what is stored in product), it's harder.
-                                                                // Let's simplified: Allow editing Name. ID remains. 
-                                                                // For NEW items, we generate ID from name.
-                                                                setCategories(newCats);
-                                                            }}
-                                                            className="flex-1 border p-1 px-2 rounded text-sm"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                if (confirm('¿Borrar categoría?')) {
-                                                                    setCategories(categories.filter((_, i) => i !== idx));
-                                                                }
-                                                            }}
-                                                            className="text-red-500 hover:text-red-700 px-2"
-                                                        >
-                                                            ✕
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <input
-                                                    placeholder="Nueva categoría..."
-                                                    className="flex-1 border p-1 px-2 rounded text-sm"
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            e.preventDefault();
-                                                            const val = (e.target as HTMLInputElement).value;
-                                                            if (val.trim()) {
-                                                                const id = val.toLowerCase().replace(/[^a-z0-9]/g, '-');
-                                                                setCategories([...categories, { id, name: val }]);
-                                                                (e.target as HTMLInputElement).value = '';
-                                                            }
-                                                        }
-                                                    }}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                                                        const val = input.value;
-                                                        if (val.trim()) {
-                                                            const id = val.toLowerCase().replace(/[^a-z0-9]/g, '-');
-                                                            setCategories([...categories, { id, name: val }]);
-                                                            input.value = '';
-                                                        }
-                                                    }}
-                                                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded text-sm"
-                                                >
-                                                    Agregar
-                                                </button>
-                                            </div>
-                                            <p className="text-xs text-gray-400 mt-2">Presiona Enter para agregar. Los IDs se generan automáticamente.</p>
-                                        </div>
-
-                                        <button
-                                            type="submit"
-                                            onClick={(e) => {
-                                                if (!confirm('⚠️ ¿Estás seguro de que deseas guardar estos cambios en la configuración?')) {
-                                                    e.preventDefault();
-                                                }
-                                            }}
-                                            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded transition"
-                                        >
-                                            Guardar Cambios
-                                        </button>
-                                    </form>
-
-                                    <hr className="my-8 border-gray-200" />
-
-                                    <div className="bg-orange-50 p-6 rounded-xl border border-orange-100">
-                                        <h3 className="text-lg font-bold text-gray-800 mb-2">Plan de Suscripción</h3>
-                                        <p className="text-gray-600 mb-4 text-sm">
-                                            Tu plan actual expira el: <strong>{storeInfo.trial_ends_at ? new Date(storeInfo.trial_ends_at).toLocaleDateString() : 'N/A'}</strong>
-                                        </p>
-                                        <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
-                                            <div>
-                                                <p className="font-bold text-gray-900">Plan Mensual</p>
-                                                <p className="text-sm text-gray-500">$60.000 / mes</p>
-                                            </div>
-                                            <button
-                                                onClick={async () => {
-                                                    try {
-                                                        const { createSubscriptionPreference } = await import('@/actions/paymentActions');
-                                                        const url = await createSubscriptionPreference();
-                                                        window.location.href = url;
-                                                    } catch (e: any) {
-                                                        alert("Error iniciando pago: " + e.message);
-                                                    }
-                                                }}
-                                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition"
-                                            >
-                                                Pagar Suscripción
-                                            </button>
-                                        </div>
-                                    </div>
-
-
-                                    <hr className="my-8 border-gray-200" />
-
-                                    <div>
-                                        <h3 className="text-lg font-bold text-gray-800 mb-4">Seguridad</h3>
-                                        <form onSubmit={async (e) => {
-                                            e.preventDefault();
-                                            const form = e.target as HTMLFormElement;
-                                            const password = (form.elements.namedItem('new_password') as HTMLInputElement).value;
-                                            if (password.length < 6) {
-                                                alert("La contraseña debe tener al menos 6 caracteres");
-                                                return;
-                                            }
-
-                                            setLoading(true);
-                                            const { error } = await supabase.auth.updateUser({ password: password });
-                                            setLoading(false);
-
-                                            if (error) alert("Error: " + error.message);
-                                            else {
-                                                alert("¡Contraseña actualizada correctamente!");
-                                                form.reset();
-                                            }
-                                        }} className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                                            <div className="mb-4">
-                                                <label className="block text-sm font-bold text-gray-700 mb-1">Nueva Contraseña</label>
-                                                <input name="new_password" type="password" placeholder="Mínimo 6 caracteres" className="w-full border p-2 rounded" required minLength={6} />
-                                            </div>
-                                            <button type="submit" className="bg-gray-800 text-white px-4 py-2 rounded text-sm font-medium hover:bg-gray-900 transition">
-                                                Actualizar Contraseña
-                                            </button>
-                                        </form>
-                                    </div>
-
-                                    <hr className="my-8 border-gray-200" />
-                                    <div>
-                                        <h3 className="text-lg font-bold text-red-600 mb-4">Zona de Peligro</h3>
-                                        <div className="bg-red-50 p-6 rounded-xl border border-red-200">
-                                            <p className="text-sm text-red-800 mb-4">
-                                                Si eliminas tu cuenta, se borrarán permanentemente tu tienda, productos, pedidos y clientes. Esta acción no se puede deshacer.
-                                            </p>
-                                            <button
-                                                onClick={() => setDeleteModalOpen(true)}
-                                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium transition"
-                                            >
-                                                Eliminar Cuenta
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </>
+                            </div>
+                        </div>
                     )}
-                </main>
-            )
-            }
 
-            {/* Modal for Product Edit */}
-            {
-                isModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-                        <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-                            <h3 className="text-xl font-bold mb-4">{editingProduct ? 'Editar' : 'Nuevo'}</h3>
+                    {activeTab === 'settings' && storeInfo && (
+                        <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-6">Configuración</h2>
                             <form action={async (formData) => {
-                                if (!confirm('⚠️ ¿Estás seguro de que deseas guardar este producto?')) return;
-                                if (editingProduct) await updateProduct(editingProduct.id, formData);
-                                else await createProduct(formData);
-                                setIsModalOpen(false);
-                                loadData();
-                            }} className="space-y-4">
-                                <input name="name" placeholder="Nombre" defaultValue={editingProduct?.name} required className="w-full border p-2 rounded" />
-                                <textarea name="description" placeholder="Descripción" defaultValue={editingProduct?.description} className="w-full border p-2 rounded" />
-                                <input name="price" type="number" placeholder="Precio" defaultValue={editingProduct?.base_price} required className="w-full border p-2 rounded" />
-                                <select name="categoryId" defaultValue={editingProduct?.category_id || categories[0]?.id || 'pizzas'} className="w-full border p-2 rounded capitalize">
-                                    {categories.map(cat => (
-                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                    ))}
-                                </select>
+                                const newSettings = {
+                                    store_name: formData.get('store_name'),
+                                    address: formData.get('address'),
+                                    phone: formData.get('phone'),
+                                    logo_url: formData.get('logo_url'),
+                                    primary_color: formData.get('primary_color'),
+                                    categories: categories,
+                                    schedule: schedule,
+                                    deliveryZones: deliveryZones,
+                                    deliveryEnabled: deliveryEnabled,
+                                    cbu: formData.get('cbu'),
+                                    alias: formData.get('alias'),
+                                    bank_name: formData.get('bank_name')
+                                };
 
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-bold text-gray-700">Imagen</label>
+                                const res = await updateStoreSettings(newSettings);
+                                if (res.success) alert('Guardado!');
+                                else alert(res.message);
+                            }} className="space-y-4">
+                                <div><label className="text-sm font-bold">Nombre</label><input name="store_name" defaultValue={storeInfo.store_name} className="w-full border p-2 rounded" /></div>
+                                <div><label className="text-sm font-bold">Dirección</label><input name="address" defaultValue={storeInfo.address} className="w-full border p-2 rounded" /></div>
+                                <div><label className="text-sm font-bold">Teléfono/WhatsApp</label><input name="phone" defaultValue={storeInfo.phone} className="w-full border p-2 rounded" /></div>
+
+                                <div>
+                                    <label className="text-sm font-bold block mb-1">Logo URL</label>
                                     <div className="flex gap-2">
                                         <input
-                                            name="image"
-                                            placeholder="URL Imagen"
-                                            value={imageUrl}
-                                            onChange={(e) => setImageUrl(e.target.value)}
+                                            name="logo_url"
+                                            defaultValue={storeInfo.logo_url}
                                             className="flex-1 border p-2 rounded"
                                         />
                                         <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded flex items-center gap-2 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -998,7 +1006,8 @@ export default function AdminPage() {
                                                         setUploading(true);
                                                         try {
                                                             const url = await uploadProductImage(e.target.files[0]);
-                                                            setImageUrl(url);
+                                                            const input = document.querySelector('input[name="logo_url"]') as HTMLInputElement;
+                                                            if (input) input.value = url;
                                                         } catch (err) {
                                                             alert('Error subiendo imagen: ' + (err as any).message);
                                                         } finally {
@@ -1009,161 +1018,655 @@ export default function AdminPage() {
                                             />
                                         </label>
                                     </div>
-                                    {imageUrl && (
-                                        <div className="relative h-40 w-full bg-gray-100 rounded overflow-hidden border border-gray-200">
-                                            <Image src={imageUrl} alt="Preview" fill className="object-contain" />
-                                        </div>
-                                    )}
                                 </div>
 
-                                {/* Discounts handling simplified for MVP */}
-                                <div className="bg-gray-50 p-2 rounded">
-                                    <p className="text-xs font-bold mb-2">Descuentos Diarios (%)</p>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {[0, 1, 2, 3, 4, 5, 6].map(d => (
-                                            <div key={d}>
-                                                <span className="text-xs text-gray-500">{['D', 'L', 'M', 'X', 'J', 'V', 'S'][d]}</span>
-                                                <input
-                                                    name={`discount_${d}`}
-                                                    className="w-full text-xs border p-1 rounded"
-                                                    defaultValue={editingProduct?.discounts?.find((x: any) => x.day_of_week === d)?.percent || ''}
-                                                />
+                                <div><label className="text-sm font-bold">Color</label><input name="primary_color" type="color" defaultValue={storeInfo.primary_color || '#f97316'} className="h-10 w-full" /></div>
+
+                                {/* Bank Details Config */}
+                                <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+                                    <h4 className="text-md font-bold text-emerald-800 mb-4 flex items-center gap-2">
+                                        🏦 Datos Bancarios (Para Transferencias)
+                                    </h4>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-700 uppercase mb-1 block">Nombre del Banco</label>
+                                            <input name="bank_name" defaultValue={storeInfo.bank_name} placeholder="Ej: Banco Galicia" className="w-full border p-2 rounded text-sm" />
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-xs font-bold text-gray-700 uppercase mb-1 block">CBU / CVU</label>
+                                                <input name="cbu" defaultValue={storeInfo.cbu} placeholder="0000..." className="w-full border p-2 rounded text-sm" />
                                             </div>
-                                        ))}
+                                            <div>
+                                                <label className="text-xs font-bold text-gray-700 uppercase mb-1 block">Alias</label>
+                                                <input name="alias" defaultValue={storeInfo.alias} placeholder="ejemplo.alias.mp" className="w-full border p-2 rounded text-sm" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-emerald-700 mt-2">
+                                        Estos datos se mostrarán a tus clientes cuando elijan pagar con transferencia.
+                                    </p>
+                                </div>
+
+                                {/* Schedule Config */}
+                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                    <h4 className="text-md font-bold text-blue-800 mb-4 flex items-center gap-2">
+                                        ⏰ Horarios y Disponibilidad
+                                    </h4>
+
+                                    <div className="mb-4">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <label className="block text-xs font-bold text-gray-700 uppercase">Turnos de Apertura</label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSchedule({
+                                                    ...schedule,
+                                                    ranges: [...(schedule.ranges || []), { id: Date.now().toString(), open: '', close: '' }]
+                                                })}
+                                                className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
+                                            >
+                                                + Agregar Turno
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            {schedule.ranges?.map((range, idx) => (
+                                                <div key={range.id} className="flex gap-2 items-center">
+                                                    <input
+                                                        type="time"
+                                                        value={range.open}
+                                                        onChange={(e) => {
+                                                            const newRanges = [...schedule.ranges];
+                                                            newRanges[idx].open = e.target.value;
+                                                            setSchedule({ ...schedule, ranges: newRanges });
+                                                        }}
+                                                        className="w-full border p-2 rounded bg-white text-sm"
+                                                    />
+                                                    <span className="text-gray-400 text-xs">a</span>
+                                                    <input
+                                                        type="time"
+                                                        value={range.close}
+                                                        onChange={(e) => {
+                                                            const newRanges = [...schedule.ranges];
+                                                            newRanges[idx].close = e.target.value;
+                                                            setSchedule({ ...schedule, ranges: newRanges });
+                                                        }}
+                                                        className="w-full border p-2 rounded bg-white text-sm"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSchedule({
+                                                                ...schedule,
+                                                                ranges: schedule.ranges.filter((_, i) => i !== idx)
+                                                            });
+                                                        }}
+                                                        className="text-red-500 hover:text-red-700 font-bold px-2"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {(!schedule.ranges || schedule.ranges.length === 0) && (
+                                                <div className="text-sm text-gray-500 italic p-2 bg-white rounded border border-gray-100 text-center">
+                                                    Sin horarios definidos (Abierto 24hs)
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-blue-600 mb-4">
+                                        Puedes agregar múltiples turnos (ej. Mediodía y Noche).
+                                    </p>
+
+                                    <div className="border-t border-blue-200 pt-4">
+                                        <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Fechas Cerradas (Feriados/Vacaciones)</label>
+                                        <div className="flex gap-2 mb-2">
+                                            <input
+                                                type="date"
+                                                id="closed-date-picker"
+                                                className="flex-1 border p-2 rounded text-sm"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const input = document.getElementById('closed-date-picker') as HTMLInputElement;
+                                                    if (input.value && !schedule.closedDates.includes(input.value)) {
+                                                        setSchedule({
+                                                            ...schedule,
+                                                            closedDates: [...schedule.closedDates, input.value].sort()
+                                                        });
+                                                        input.value = '';
+                                                    }
+                                                }}
+                                                className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                                            >
+                                                Agregar
+                                            </button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {schedule.closedDates.map((date) => (
+                                                <span key={date} className="bg-white border border-blue-200 text-blue-800 px-2 py-1 rounded text-xs flex items-center gap-2">
+                                                    {new Date(date + 'T12:00:00').toLocaleDateString()}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSchedule({
+                                                            ...schedule,
+                                                            closedDates: schedule.closedDates.filter(d => d !== date)
+                                                        })}
+                                                        className="text-red-500 hover:text-red-700 font-bold"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </span>
+                                            ))}
+                                            {schedule.closedDates.length === 0 && <span className="text-gray-400 text-xs italic">No hay fechas bloqueadas</span>}
+                                        </div>
                                     </div>
                                 </div>
 
-                                <button className="w-full bg-orange-600 text-white font-bold py-2 rounded">Guardar</button>
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="w-full text-gray-500 py-2">Cancelar</button>
-                            </form>
-                        </div>
-                    </div>
-                )
-            }
+                                {/* Delivery Zones Config */}
+                                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h4 className="text-md font-bold text-orange-800 flex items-center gap-2">
+                                            🛵 Zonas de Envío
+                                        </h4>
+                                        <label className="flex items-center cursor-pointer relative">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={deliveryEnabled}
+                                                onChange={(e) => setDeliveryEnabled(e.target.checked)}
+                                            />
+                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                                            <span className="ml-3 text-sm font-medium text-orange-900">{deliveryEnabled ? 'Activado' : 'Desactivado'}</span>
+                                        </label>
+                                    </div>
 
-            {/* Password Reset Modal */}
-            {
-                showPasswordReset && (
-                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                        <div className="bg-white rounded-xl max-w-md w-full p-8 shadow-2xl">
-                            <h3 className="text-2xl font-bold mb-4 text-center">🔐 Restablecer Contraseña</h3>
-                            <p className="text-gray-600 mb-6 text-center text-sm">
-                                Has iniciado sesión vía recuperación. Por favor establece una nueva contraseña para tu cuenta.
-                            </p>
-                            <form onSubmit={async (e) => {
-                                e.preventDefault();
-                                const form = e.target as HTMLFormElement;
-                                const password = (form.elements.namedItem('reset_new_password') as HTMLInputElement).value;
+                                    {deliveryEnabled && (
+                                        <>
+                                            <div className="space-y-3 mb-4">
+                                                {deliveryZones.map((zone, idx) => (
+                                                    <div key={idx} className="flex gap-2 items-center bg-white p-2 rounded shadow-sm">
+                                                        <input
+                                                            placeholder="Nombre Zona (Ej: Centro)"
+                                                            value={zone.name}
+                                                            onChange={(e) => {
+                                                                const newZones = [...deliveryZones];
+                                                                newZones[idx].name = e.target.value;
+                                                                setDeliveryZones(newZones);
+                                                            }}
+                                                            className="flex-1 border p-1 rounded text-sm"
+                                                        />
+                                                        <span className="text-gray-500 font-bold">$</span>
+                                                        <input
+                                                            type="number"
+                                                            placeholder="Precio"
+                                                            value={zone.price}
+                                                            onChange={(e) => {
+                                                                const newZones = [...deliveryZones];
+                                                                newZones[idx].price = Number(e.target.value);
+                                                                setDeliveryZones(newZones);
+                                                            }}
+                                                            className="w-24 border p-1 rounded text-sm"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setDeliveryZones(deliveryZones.filter((_, i) => i !== idx))}
+                                                            className="text-red-500 hover:text-red-700 px-2 font-bold"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
 
-                                if (password.length < 6) {
-                                    alert("Mínimo 6 caracteres");
-                                    return;
-                                }
-
-                                const { error } = await supabase.auth.updateUser({ password });
-
-                                if (error) {
-                                    alert("Error: " + error.message);
-                                } else {
-                                    alert("¡Contraseña establecida con éxito!");
-                                    setShowPasswordReset(false);
-                                    // Clean URL
-                                    router.push('/admin');
-                                }
-                            }} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Nueva Contraseña</label>
-                                    <input name="reset_new_password" type="password" placeholder="********" className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" required minLength={6} />
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setDeliveryZones([...deliveryZones, { id: Date.now().toString(), name: '', price: 0 }])}
+                                                    className="bg-orange-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-orange-700 transition w-full"
+                                                >
+                                                    + Agregar Zona
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-orange-600 mt-2">
+                                                Si agregas zonas, el cliente deberá elegir una al pedir envío a domicilio y el costo se sumará automáticamente.
+                                            </p>
+                                        </>
+                                    )}
                                 </div>
-                                <button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg transition">
-                                    Guardar Nueva Contraseña
-                                </button>
-                                <button type="button" onClick={() => setShowPasswordReset(false)} className="w-full text-gray-500 text-sm py-2">
-                                    Cancelar / Hacerlo después
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                )
-            }
 
-            {/* Confirmation Modal */}
-            {
-                confirmation && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
-                        <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl">
-                            <p className="mb-4 font-bold">{confirmation.message}</p>
-                            <div className="flex gap-2">
-                                <button onClick={() => setConfirmation(null)} className="flex-1 py-2 bg-gray-100 rounded">No</button>
-                                <button onClick={() => { confirmation.onConfirm(); setConfirmation(null); }} className="flex-1 py-2 bg-red-600 text-white rounded">Sí</button>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
+                                {/* Category Management */}
+                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <label className="text-sm font-bold block mb-2">Categorías de Productos</label>
+                                    <div className="space-y-2 mb-3">
+                                        {categories.map((cat, idx) => (
+                                            <div key={idx} className="flex gap-2 items-center">
+                                                <input
+                                                    value={cat.name}
+                                                    onChange={(e) => {
+                                                        const newCats = [...categories];
+                                                        newCats[idx].name = e.target.value;
+                                                        setCategories(newCats);
+                                                    }}
+                                                    className="flex-1 border p-1 px-2 rounded text-sm"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (confirm('¿Borrar categoría?')) {
+                                                            setCategories(categories.filter((_, i) => i !== idx));
+                                                        }
+                                                    }}
+                                                    className="text-red-500 hover:text-red-700 px-2"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <input
+                                            placeholder="Nueva categoría..."
+                                            className="flex-1 border p-1 px-2 rounded text-sm"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    const val = (e.target as HTMLInputElement).value;
+                                                    if (val.trim()) {
+                                                        const id = val.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                                                        setCategories([...categories, { id, name: val }]);
+                                                        (e.target as HTMLInputElement).value = '';
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                                                const val = input.value;
+                                                if (val.trim()) {
+                                                    const id = val.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                                                    setCategories([...categories, { id, name: val }]);
+                                                    input.value = '';
+                                                }
+                                            }}
+                                            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded text-sm"
+                                        >
+                                            Agregar
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-2">Presiona Enter para agregar. Los IDs se generan automáticamente.</p>
+                                </div>
 
-            {/* Account Deletion Modal */}
-            {
-                deleteModalOpen && (
-                    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                        <div className="bg-white rounded-xl max-w-md w-full p-8 shadow-2xl border-2 border-red-100">
-                            <h3 className="text-2xl font-bold mb-4 text-red-600">⚠️ Eliminar Cuenta</h3>
-                            <p className="text-gray-600 mb-6 text-sm">
-                                Esta acción es <strong>irreversible</strong>. Escribe <span className="font-mono font-bold select-all bg-gray-100 px-1 rounded">ELIMINAR</span> abajo para confirmar.
-                            </p>
-
-                            <input
-                                className="w-full border p-3 rounded mb-4 text-center tracking-widest uppercase font-bold"
-                                placeholder="Escribe ELIMINAR"
-                                value={deleteInput}
-                                onChange={e => setDeleteInput(e.target.value)}
-                            />
-
-                            <div className="flex gap-3">
                                 <button
-                                    onClick={() => {
-                                        setDeleteModalOpen(false);
-                                        setDeleteInput('');
-                                    }}
-                                    className="flex-1 py-3 bg-gray-100 font-bold text-gray-700 rounded-lg hover:bg-gray-200 transition"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    disabled={deleteInput !== 'ELIMINAR'}
-                                    onClick={async () => {
-                                        if (deleteInput !== 'ELIMINAR') return;
-
-                                        if (!confirm('¿Última oportunidad? Se borrará todo.')) return;
-
-                                        setLoading(true);
-                                        try {
-                                            const { deleteAccount } = await import('@/actions/settingsActions');
-                                            const res = await deleteAccount();
-                                            if (res.success) {
-                                                alert('Cuenta eliminada. Gracias por usar LoyalApp.');
-                                                window.location.href = '/login';
-                                            } else {
-                                                alert('Error: ' + res.message);
-                                                setLoading(false);
-                                            }
-                                        } catch (err: any) {
-                                            alert('Error crítico: ' + err.message);
-                                            setLoading(false);
+                                    type="submit"
+                                    onClick={(e) => {
+                                        if (!confirm('⚠️ ¿Estás seguro de que deseas guardar estos cambios en la configuración?')) {
+                                            e.preventDefault();
                                         }
                                     }}
-                                    className={`flex-1 py-3 font-bold text-white rounded-lg transition ${deleteInput === 'ELIMINAR'
-                                        ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200'
-                                        : 'bg-gray-300 cursor-not-allowed'
-                                        }`}
+                                    className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded transition"
                                 >
-                                    {loading ? 'Eliminando...' : 'Confirmar'}
+                                    Guardar Cambios
                                 </button>
+                            </form>
+
+                            <hr className="my-8 border-gray-200" />
+
+                            <div className="bg-orange-50 p-6 rounded-xl border border-orange-100">
+                                <h3 className="text-lg font-bold text-gray-800 mb-2">Plan de Suscripción</h3>
+                                <p className="text-gray-600 mb-4 text-sm">
+                                    Tu plan actual expira el: <strong>{storeInfo.trial_ends_at ? new Date(storeInfo.trial_ends_at).toLocaleDateString() : 'N/A'}</strong>
+                                </p>
+                                <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
+                                    <div>
+                                        <p className="font-bold text-gray-900">Plan Mensual</p>
+                                        <p className="text-sm text-gray-500">$60.000 / mes</p>
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const { createSubscriptionPreference } = await import('@/actions/paymentActions');
+                                                const url = await createSubscriptionPreference();
+                                                window.location.href = url;
+                                            } catch (e: any) {
+                                                alert("Error iniciando pago: " + e.message);
+                                            }
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition"
+                                    >
+                                        Pagar Suscripción
+                                    </button>
+                                </div>
+                            </div>
+
+                            <hr className="my-8 border-gray-200" />
+
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-800 mb-4">Seguridad</h3>
+                                <form onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    const form = e.target as HTMLFormElement;
+                                    const password = (form.elements.namedItem('new_password') as HTMLInputElement).value;
+                                    if (password.length < 6) {
+                                        alert("La contraseña debe tener al menos 6 caracteres");
+                                        return;
+                                    }
+
+                                    setLoading(true);
+                                    const { error } = await supabase.auth.updateUser({ password: password });
+                                    setLoading(false);
+
+                                    if (error) alert("Error: " + error.message);
+                                    else {
+                                        alert("¡Contraseña actualizada correctamente!");
+                                        form.reset();
+                                    }
+                                }} className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Nueva Contraseña</label>
+                                        <input name="new_password" type="password" placeholder="Mínimo 6 caracteres" className="w-full border p-2 rounded" required minLength={6} />
+                                    </div>
+                                    <button type="submit" className="bg-gray-800 text-white px-4 py-2 rounded text-sm font-medium hover:bg-gray-900 transition">
+                                        Actualizar Contraseña
+                                    </button>
+                                </form>
+                            </div>
+
+                            <hr className="my-8 border-gray-200" />
+                            <div>
+                                <h3 className="text-lg font-bold text-red-600 mb-4">Zona de Peligro</h3>
+                                <div className="bg-red-50 p-6 rounded-xl border border-red-200">
+                                    <p className="text-sm text-red-800 mb-4">
+                                        Si eliminas tu cuenta, se borrarán permanentemente tu tienda, productos, pedidos y clientes. Esta acción no se puede deshacer.
+                                    </p>
+                                    <button
+                                        onClick={() => setDeleteModalOpen(true)}
+                                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium transition"
+                                    >
+                                        Eliminar Cuenta
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'help' && (
+                        <div className="max-w-4xl mx-auto space-y-8 pb-12">
+                            <div className="text-center">
+                                <h2 className="text-3xl font-bold text-gray-800">Centro de Ayuda y Guía 💡</h2>
+                                <p className="text-gray-500 mt-2 text-lg">Aprende a configurar y sacar el máximo provecho de tu tienda.</p>
+                            </div>
+
+                            <div className="grid gap-6 md:grid-cols-2">
+                                {/* Paso 1: Configuración Inicial */}
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-orange-100">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <span className="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold text-xl">1</span>
+                                        <h3 className="text-xl font-bold text-gray-800">Primeros Pasos</h3>
+                                    </div>
+                                    <ul className="space-y-3 text-gray-600">
+                                        <li className="flex gap-2"><span>✅</span> <strong>Link de Tienda:</strong> Copia tu link en el botón arriba (📋) y pégalo en tu biografía de Instagram o estados de WhatsApp.</li>
+                                        <li className="flex gap-2"><span>🎨</span> <strong>Marca:</strong> Ve a <strong>Configuración</strong> para subir tu logo, elegir tu color y poner el nombre de tu negocio.</li>
+                                        <li className="flex gap-2"><span>⏰</span> <strong>Horarios:</strong> Configura tus turnos (mañana/noche) para que los clientes sepan cuándo estás abierto.</li>
+                                    </ul>
+                                </div>
+
+                                {/* Paso 2: Productos */}
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-blue-100">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <span className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-xl">2</span>
+                                        <h3 className="text-xl font-bold text-gray-800">Tus Productos</h3>
+                                    </div>
+                                    <ul className="space-y-3 text-gray-600">
+                                        <li className="flex gap-2"><span>📂</span> <strong>Categorías:</strong> En Configuración, crea categorías como "Pizzas", "Bebidas", etc.</li>
+                                        <li className="flex gap-2"><span>➕</span> <strong>Carga Inicial:</strong> En la pestaña <strong>Productos</strong>, haz clic en "+ Nuevo Producto". Agrega fotos y precios realistas.</li>
+                                        <li className="flex gap-2"><span>🚫</span> <strong>Stock:</strong> Si un producto se agota, usa el botón "Agotado" para que no se muestre en el menú.</li>
+                                    </ul>
+                                </div>
+
+                                {/* Paso 3: Logística */}
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-green-100">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <span className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-bold text-xl">3</span>
+                                        <h3 className="text-xl font-bold text-gray-800">Envíos y Entregas</h3>
+                                    </div>
+                                    <ul className="space-y-3 text-gray-600">
+                                        <li className="flex gap-2"><span>🛵</span> <strong>Zonas de Delivery:</strong> En Configuración, agrega las zonas donde repartes y el costo de envío de cada una.</li>
+                                        <li className="flex gap-2"><span>🏃</span> <strong>Retiro en Local:</strong> Está activo por defecto. Los clientes pueden elegir retirar sin costo extra.</li>
+                                        <li className="flex gap-2"><span>⏱️</span> <strong>Demora de Cocina:</strong> En la pestaña <strong>Pedidos</strong>, aumenta la demora (+15) si estás muy cargado. Se avisará al cliente antes de comprar.</li>
+                                    </ul>
+                                </div>
+
+                                {/* Paso 4: Ventas y Clientes */}
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-purple-100">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <span className="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold text-xl">4</span>
+                                        <h3 className="text-xl font-bold text-gray-800">Crecimiento</h3>
+                                    </div>
+                                    <ul className="space-y-3 text-gray-600">
+                                        <li className="flex gap-2"><span>🔊</span> <strong>Sonido de Alerta:</strong> Haz clic en "Activar Sonido" en Pedidos para escuchar un timbre cuando llega un pedido nuevo.</li>
+                                        <li className="flex gap-2"><span>📱</span> <strong>WhatsApp Marketing:</strong> En la pestaña <strong>Clientes</strong>, verás quiénes no compran hace 20 días. Haz clic en 💬 para mandarles una promo.</li>
+                                        <li className="flex gap-2"><span>📈</span> <strong>Ranking:</strong> Mira qué es lo que más vendes en <strong>Estadísticas</strong> para armar combos.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-600 text-white p-8 rounded-3xl shadow-xl flex flex-col items-center text-center gap-4">
+                                <h3 className="text-2xl font-bold">¿Necesitas ayuda personalizada?</h3>
+                                <p className="opacity-90 max-w-lg text-lg">Nuestro equipo técnico está listo para ayudarte a configurar tu cuenta o resolver cualquier duda.</p>
+                                <a
+                                    href="https://wa.me/5493454286955"
+                                    target="_blank"
+                                    className="bg-white text-blue-600 px-8 py-3 rounded-full font-bold text-lg hover:bg-blue-50 transition transform hover:scale-105 shadow-lg"
+                                >
+                                    Hablar con Soporte 💬
+                                </a>
+                            </div>
+
+                            <div className="bg-gray-100 p-6 rounded-2xl border border-gray-200">
+                                <h4 className="font-bold text-gray-800 mb-4">Preguntas Frecuentes</h4>
+                                <div className="space-y-4">
+                                    <details className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 group">
+                                        <summary className="font-bold cursor-pointer list-none flex justify-between items-center group-open:text-orange-600">
+                                            ¿Cómo recibo el dinero de mis pedidos?
+                                            <span className="group-open:rotate-180 transition-transform">▼</span>
+                                        </summary>
+                                        <p className="mt-4 text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            Por ahora, los pedidos llegan directamente a tu panel y los clientes pagan al recibir (efectivo/transferencia) o mediante el link de pago que les envíes por WhatsApp. Estamos trabajando en la integración directa de Mercado Pago.
+                                        </p>
+                                    </details>
+                                    <details className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 group">
+                                        <summary className="font-bold cursor-pointer list-none flex justify-between items-center group-open:text-orange-600">
+                                            ¿Qué pasa cuando termina mi prueba gratuita?
+                                            <span className="group-open:rotate-180 transition-transform">▼</span>
+                                        </summary>
+                                        <p className="mt-4 text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            Al finalizar los 30 días, el sistema te pedirá activar una suscripción mensual. Si no lo haces, la tienda se desactivará pero no perderás tus datos (productos y clientes), podrás volver cuando quieras.
+                                        </p>
+                                    </details>
+                                    <details className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 group">
+                                        <summary className="font-bold cursor-pointer list-none flex justify-between items-center group-open:text-orange-600">
+                                            ¿Cómo instalo el panel en mi celular?
+                                            <span className="group-open:rotate-180 transition-transform">▼</span>
+                                        </summary>
+                                        <p className="mt-4 text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            Haz clic en el botón <strong>"Instalar App"</strong> que ves arriba a la derecha en la barra de navegación. Esto creará un icono directo en tu pantalla de inicio para que entres como una aplicación común.
+                                        </p>
+                                    </details>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </main>
+            )}
+
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
+                    <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl relative my-auto">
+                        <h3 className="text-xl font-bold mb-4">{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</h3>
+                        <form action={async (formData) => {
+                            if (editingProduct) await updateProduct(editingProduct.id, formData);
+                            else await createProduct(formData);
+                            setIsModalOpen(false); loadData();
+                        }} className="space-y-4">
+                            <input name="name" placeholder="Nombre" defaultValue={editingProduct?.name} required className="w-full border p-2 rounded" />
+                            <textarea name="description" placeholder="Descripción" defaultValue={editingProduct?.description} className="w-full border p-2 rounded" />
+                            <input name="price" type="number" placeholder="Precio" defaultValue={editingProduct?.base_price} required className="w-full border p-2 rounded" />
+                            <select name="categoryId" defaultValue={editingProduct?.category_id || categories[0]?.id} className="w-full border p-2 rounded capitalize">
+                                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                            </select>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-bold text-gray-700">Imagen</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        name="image"
+                                        placeholder="URL Imagen"
+                                        value={imageUrl}
+                                        onChange={(e) => setImageUrl(e.target.value)}
+                                        className="flex-1 border p-2 rounded"
+                                    />
+                                    <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded flex items-center gap-2 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                        <span className="text-xl">📷</span>
+                                        <span className="text-sm font-medium">{uploading ? '...' : 'Subir'}</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            disabled={uploading}
+                                            onChange={async (e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                    setUploading(true);
+                                                    try {
+                                                        const url = await uploadProductImage(e.target.files[0]);
+                                                        setImageUrl(url);
+                                                    } catch (err) {
+                                                        alert('Error subiendo imagen: ' + (err as any).message);
+                                                    } finally {
+                                                        setUploading(false);
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                </div>
+                                {imageUrl && (
+                                    <div className="relative h-40 w-full bg-gray-100 rounded overflow-hidden border border-gray-200">
+                                        <Image src={imageUrl} alt="Preview" fill className="object-contain" />
+                                    </div>
+                                )}
+                            </div>
+                            <button className="w-full bg-orange-600 text-white font-bold py-2 rounded">Guardar</button>
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="w-full text-gray-500 py-2">Cancelar</button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {confirmation && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+                    <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl">
+                        <p className="mb-4 font-bold">{confirmation.message}</p>
+                        <div className="flex gap-2">
+                            <button onClick={() => setConfirmation(null)} className="flex-1 py-2 bg-gray-100 rounded">No</button>
+                            <button onClick={() => { confirmation.onConfirm(); setConfirmation(null); }} className="flex-1 py-2 bg-red-600 text-white rounded">Sí</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {deleteModalOpen && (
+                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl max-w-md w-full p-8 shadow-2xl border-2 border-red-100 text-center">
+                        <h3 className="text-2xl font-bold mb-4 text-red-600">⚠️ Eliminar Cuenta</h3>
+                        <p className="text-gray-600 mb-6 text-sm">Esta acción es irreversible. Escribe <strong>ELIMINAR</strong> para confirmar.</p>
+                        <input className="w-full border p-3 rounded mb-4 text-center" placeholder="Escribe ELIMINAR" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} />
+                        <div className="flex gap-3">
+                            <button onClick={() => setDeleteModalOpen(false)} className="flex-1 py-3 bg-gray-100 font-bold rounded-lg transition hover:bg-gray-200">Cancelar</button>
+                            <button disabled={deleteInput !== 'ELIMINAR'} onClick={async () => {
+                                const { deleteAccount } = await import('@/actions/settingsActions');
+                                const res = await deleteAccount();
+                                if (res.success) window.location.href = '/login'; else alert(res.message);
+                            }} className={`flex-1 py-3 font-bold text-white rounded-lg transition ${deleteInput === 'ELIMINAR' ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-300'}`}>Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function OrdersList({ orders, updateOrderStatus, archiveOrder, loadData }: { orders: any[], updateOrderStatus: any, archiveOrder: any, loadData: any }) {
+    const [now, setNow] = useState(Date.now());
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    if (orders.length === 0) return <p className="text-gray-500 text-center py-10">Esperando pedidos...</p>;
+
+    return (
+        <>
+            {orders.map((order) => {
+                const elapsed = (now - new Date(order.created_at).getTime()) / 60000;
+                let statusColor = 'border-gray-100';
+                let timerColor = 'text-gray-500';
+
+                if (order.status !== 'paid') {
+                    if (elapsed > 30) { statusColor = 'border-red-500 bg-red-50 ring-2 ring-red-100'; timerColor = 'text-red-600 font-bold animate-pulse'; }
+                    else if (elapsed > 15) { statusColor = 'border-yellow-400 bg-yellow-50'; timerColor = 'text-yellow-600 font-bold'; }
+                    else { statusColor = 'border-green-400 bg-green-50'; timerColor = 'text-green-600 font-bold'; }
+                }
+
+                return (
+                    <div key={order.id} className={`p-6 rounded-xl shadow-sm border transition-all ${statusColor} flex flex-col md:flex-row justify-between gap-4`}>
+                        <div className="text-left">
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className="font-bold text-lg text-gray-900">{order.customers?.name || 'Cliente'}</span>
+                                <span className={`text-sm px-2 py-1 rounded-full bg-white/50 ${timerColor}`}>Hace {Math.floor(elapsed)} min</span>
+                                <span className="text-xs text-gray-400">{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <div className="text-sm text-gray-600 mb-2 font-medium">
+                                {Array.isArray(order.details) && order.details.map((item: any, idx: number) => (
+                                    <div key={idx} className="flex gap-1"><span>{item.quantity}x</span><span>{item.product?.name}</span></div>
+                                ))}
+                            </div>
+                            <p className="text-gray-600 mb-1 text-sm">📞 {order.customers?.phone} <a href={`https://wa.me/${order.customers?.phone}`} target="_blank" className="text-green-600 text-xs ml-1 hover:underline">Chat</a></p>
+                            <p className="text-gray-600 text-sm">{order.delivery_method === 'delivery' ? `🛵 Envío a: ${order.delivery_address}` : '🏃 Retiro en Local'}</p>
+                        </div>
+                        <div className="flex flex-col items-end justify-center gap-2">
+                            <span className="text-2xl font-bold text-green-600">${order.total_amount?.toLocaleString('es-AR')}</span>
+                            <div className="flex items-center gap-2">
+                                {order.delivery_method === 'delivery' && (
+                                    <a href={`https://wa.me/${order.customers?.phone}?text=${encodeURIComponent('Hola, tu pedido salió en camino! 🛵')}`} target="_blank" className="text-xs bg-blue-500 text-white px-2 py-1 rounded shadow-sm no-underline transition hover:bg-blue-600">🛵 Avisar salida</a>
+                                )}
+                                {order.delivery_method === 'pickup' && (
+                                    <a href={`https://wa.me/${order.customers?.phone}?text=${encodeURIComponent('¡Hola! Tu pedido ya está listo para retirar. ¡Te esperamos! 🍕')}`} target="_blank" className="text-xs bg-orange-500 text-white px-2 py-1 rounded shadow-sm no-underline transition hover:bg-orange-600">🔔 Avisar retiro</a>
+                                )}
+                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${order.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-white border border-gray-200 text-gray-600'}`}>{order.status === 'paid' ? 'Completado' : 'Pendiente'}</span>
+                                {order.status !== 'paid' && (
+                                    <>
+                                        <button
+                                            onClick={async () => {
+                                                if (confirm('¿Estás seguro de que quieres cancelar este pedido?')) {
+                                                    await archiveOrder(order.id);
+                                                    loadData();
+                                                }
+                                            }}
+                                            className="text-xs text-red-600 hover:text-red-700 font-medium px-2 py-1"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button onClick={async () => { await updateOrderStatus(order.id, 'paid'); loadData(); }} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded font-bold transition shadow-lg shadow-green-200 hover:bg-green-700">✔ Completar</button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
-                )
-            }
-        </div >
+                );
+            })}
+        </>
     );
 }
