@@ -82,6 +82,10 @@ export default function AdminPage() {
     const [bulkPercentage, setBulkPercentage] = useState<string>('');
     const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
+    // Category Management State
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
+
     // Automatic Delay Monitor
     useEffect(() => {
         if (!autoDelay) return;
@@ -296,6 +300,44 @@ export default function AdminPage() {
     const handleToggle = async (id: string, currentStatus: boolean) => {
         await toggleProductAvailability(id, currentStatus);
         loadData();
+    };
+
+    const handleAddCategory = async () => {
+        if (!newCategoryName.trim()) return;
+        const slug = newCategoryName.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+        if (categories.some(c => c.id === slug)) return alert("La categoría ya existe");
+
+        const newCategories = [...categories, { id: slug, name: newCategoryName.trim() }];
+        setCategories(newCategories);
+        setNewCategoryName('');
+
+        // Persist
+        if (storeInfo) {
+            const { updateStoreSettings } = await import('@/actions/settingsActions');
+            await updateStoreSettings({
+                ...storeInfo.settings,
+                store_name: storeInfo.store_name,
+                categories: newCategories
+            });
+        }
+    };
+
+    const handleDeleteCategory = async (id: string) => {
+        if (!confirm("¿Seguro que quieres borrar esta categoría?")) return;
+        if (products.some(p => p.category_id === id)) return alert("No puedes borrar una categoría que tiene productos. Elimina o mueve los productos primero.");
+
+        const newCategories = categories.filter(c => c.id !== id);
+        setCategories(newCategories);
+
+        // Persist
+        if (storeInfo) {
+            const { updateStoreSettings } = await import('@/actions/settingsActions');
+            await updateStoreSettings({
+                ...storeInfo.settings,
+                store_name: storeInfo.store_name,
+                categories: newCategories
+            });
+        }
     };
 
     const handleEditProduct = (product: any) => {
@@ -650,6 +692,7 @@ export default function AdminPage() {
                                     >
                                         {selectedProducts.size > 0 && selectedProducts.size === products.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
                                     </button>
+                                    <button onClick={() => setIsCategoryModalOpen(true)} className="bg-white border text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition">📂 Gestionar Categorías</button>
                                     <button onClick={handleCreateNew} className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg shadow-sm font-medium transition">+ Nuevo Producto</button>
                                 </div>
                             </div>
@@ -1589,6 +1632,39 @@ export default function AdminPage() {
                             </div>
                         </div>
                     )}
+
+                    {isCategoryModalOpen && (
+                        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                            <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+                                <h3 className="text-xl font-bold mb-4 text-gray-800">Gestionar Categorías</h3>
+                                <div className="flex gap-2 mb-6">
+                                    <input
+                                        value={newCategoryName}
+                                        onChange={(e) => setNewCategoryName(e.target.value)}
+                                        placeholder="Nueva Categoría..."
+                                        className="flex-1 border p-2 rounded focus:ring-2 focus:ring-orange-500 outline-none"
+                                    />
+                                    <button onClick={handleAddCategory} disabled={!newCategoryName.trim()} className="bg-orange-600 text-white px-4 py-2 rounded font-bold hover:bg-orange-700 disabled:bg-gray-300">
+                                        +
+                                    </button>
+                                </div>
+                                <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                                    {categories.map((cat) => (
+                                        <div key={cat.id} className="flex justify-between items-center bg-gray-50 p-3 rounded">
+                                            <span className="font-medium text-gray-700">{cat.name}</span>
+                                            <button onClick={() => handleDeleteCategory(cat.id)} className="text-red-500 hover:text-red-700 p-1">
+                                                🗑
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button onClick={() => setIsCategoryModalOpen(false)} className="w-full mt-6 py-3 bg-gray-100 font-bold rounded-lg text-gray-600 hover:bg-gray-200">
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                 </main>
             )}
         </div>
