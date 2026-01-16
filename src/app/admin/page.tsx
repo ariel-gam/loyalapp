@@ -759,7 +759,6 @@ export default function AdminPage() {
                                     if (categoryProducts.length === 0) return null;
 
                                     return (
-                                    return (
                                         <div key={category.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
                                             <div
                                                 onClick={() => {
