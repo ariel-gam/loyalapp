@@ -635,9 +635,9 @@ export default function AdminPage() {
 
                     {activeTab === 'products' && (
                         <div>
-                            <div className="flex justify-between items-center mb-6">
+                            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                                 <h2 className="text-2xl font-bold text-gray-800">Mis Productos</h2>
-                                <div className="flex gap-2">
+                                <div className="flex flex-wrap gap-2">
                                     <button
                                         onClick={() => {
                                             if (selectedProducts.size === products.length) {
@@ -706,51 +706,68 @@ export default function AdminPage() {
                                     </div>
                                 </div>
                             )}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {products.map((product) => (
-                                    <div
-                                        key={product.id}
-                                        className={`rounded-xl shadow-sm border overflow-hidden relative group transition-all cursor-pointer ${selectedProducts.has(product.id) ? 'ring-2 ring-orange-500 border-orange-500 bg-orange-50' : 'bg-white border-gray-100 hover:shadow-md'}`}
-                                        onClick={(e) => {
-                                            // Allow clicking anywhere on card to select, unless clicking a button
-                                            if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('button')) return;
-                                            const newSet = new Set(selectedProducts);
-                                            if (newSet.has(product.id)) newSet.delete(product.id);
-                                            else newSet.add(product.id);
-                                            setSelectedProducts(newSet);
-                                        }}
-                                    >
-                                        <div className="absolute top-2 left-2 z-10">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedProducts.has(product.id)}
-                                                onChange={() => { }} // Handled by parent click
-                                                className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 cursor-pointer shadow-sm border-gray-300"
-                                            />
-                                        </div>
-                                        <div className="h-48 relative bg-gray-100">
-                                            {product.image_url && <Image src={product.image_url} alt={product.name} fill className="object-cover" />}
-                                        </div>
-                                        <div className="p-4">
-                                            <h3 className="font-bold text-gray-900">{product.name}</h3>
-                                            <p className="text-sm text-gray-500 mb-2 capitalize">{product.category_id.replace('-', ' ')}</p>
-                                            <div className="flex justify-between items-center mb-3">
-                                                <span className="font-bold text-lg">${product.base_price?.toLocaleString('es-AR')}</span>
-                                                <button onClick={() => handleToggle(product.id, product.is_available)} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${product.is_available !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
-                                                    {product.is_available !== false ? 'Disponible' : 'Agotado'}
-                                                </button>
+
+                            <div className="space-y-10">
+                                {categories.map(category => {
+                                    const categoryProducts = products.filter(p => p.category_id === category.id);
+                                    if (categoryProducts.length === 0) return null;
+
+                                    return (
+                                        <div key={category.id}>
+                                            <h3 className="text-xl font-bold text-gray-700 mb-4 border-b pb-2 flex items-center gap-2">
+                                                <span className="bg-orange-100 text-orange-600 w-8 h-8 flex items-center justify-center rounded-lg text-sm">
+                                                    {categoryProducts.length}
+                                                </span>
+                                                {category.name}
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                {categoryProducts.map((product) => (
+                                                    <div
+                                                        key={product.id}
+                                                        className={`rounded-xl shadow-sm border overflow-hidden relative group transition-all cursor-pointer ${selectedProducts.has(product.id) ? 'ring-2 ring-orange-500 border-orange-500 bg-orange-50' : 'bg-white border-gray-100 hover:shadow-md'}`}
+                                                        onClick={(e) => {
+                                                            // Allow clicking anywhere on card to select, unless clicking a button
+                                                            if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('button')) return;
+                                                            const newSet = new Set(selectedProducts);
+                                                            if (newSet.has(product.id)) newSet.delete(product.id);
+                                                            else newSet.add(product.id);
+                                                            setSelectedProducts(newSet);
+                                                        }}
+                                                    >
+                                                        <div className="absolute top-2 left-2 z-10">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedProducts.has(product.id)}
+                                                                onChange={() => { }} // Handled by parent click
+                                                                className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 cursor-pointer shadow-sm border-gray-300"
+                                                            />
+                                                        </div>
+                                                        <div className="h-48 relative bg-gray-100">
+                                                            {product.image_url && <Image src={product.image_url} alt={product.name} fill className="object-cover" />}
+                                                        </div>
+                                                        <div className="p-4">
+                                                            <h3 className="font-bold text-gray-900">{product.name}</h3>
+                                                            <div className="flex justify-between items-center mb-3">
+                                                                <span className="font-bold text-lg">${product.base_price?.toLocaleString('es-AR')}</span>
+                                                                <button onClick={() => handleToggle(product.id, product.is_available)} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${product.is_available !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
+                                                                    {product.is_available !== false ? 'Disponible' : 'Agotado'}
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex gap-2 pt-2 border-t border-gray-100">
+                                                                <button onClick={() => handleEditProduct(product)} className="flex-1 bg-blue-50 text-blue-600 text-sm font-medium py-1.5 rounded hover:bg-blue-100 transition flex items-center justify-center gap-1">
+                                                                    ✏️ Editar
+                                                                </button>
+                                                                <button onClick={() => handleDeleteProduct(product.id)} className="flex-1 bg-red-50 text-red-600 text-sm font-medium py-1.5 rounded hover:bg-red-100 transition flex items-center justify-center gap-1">
+                                                                    🗑 Eliminar
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
-                                            <div className="flex gap-2 pt-2 border-t border-gray-100">
-                                                <button onClick={() => handleEditProduct(product)} className="flex-1 bg-blue-50 text-blue-600 text-sm font-medium py-1.5 rounded hover:bg-blue-100 transition flex items-center justify-center gap-1">
-                                                    ✏️ Editar
-                                                </button>
-                                                <button onClick={() => handleDeleteProduct(product.id)} className="flex-1 bg-red-50 text-red-600 text-sm font-medium py-1.5 rounded hover:bg-red-100 transition flex items-center justify-center gap-1">
-                                                    🗑 Eliminar
-                                                </button>
-                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -1393,206 +1410,186 @@ export default function AdminPage() {
                         </div>
                     )}
 
+
                     {activeTab === 'help' && (
-                        <div className="max-w-4xl mx-auto space-y-8 pb-12">
-                            <div className="text-center">
-                                <h2 className="text-3xl font-bold text-gray-800">Centro de Ayuda y Guía 💡</h2>
-                                <p className="text-gray-500 mt-2 text-lg">Aprende a configurar y sacar el máximo provecho de tu tienda.</p>
+                        <div className="space-y-6 max-w-4xl mx-auto">
+                            <div className="bg-white rounded-xl shadow-sm border border-orange-100 overflow-hidden">
+                                <div className="bg-orange-50 p-6 border-b border-orange-100">
+                                    <h2 className="text-2xl font-bold text-orange-800">Centro de Ayuda 🆘</h2>
+                                    <p className="text-orange-700 mt-2">Guía rápida para administrar tu negocio sin complicaciones.</p>
+                                </div>
+
+                                <div className="divide-y divide-gray-100">
+                                    {/* FAQ Items */}
+                                    <div className="p-4">
+                                        <details className="group">
+                                            <summary className="flex justify-between items-center font-medium cursor-pointer list-none text-gray-800 hover:text-orange-600 transition-colors">
+                                                ¿Cómo cargo un nuevo producto?
+                                                <span className="group-open:rotate-180 transition-transform">▼</span>
+                                            </summary>
+                                            <p className="mt-4 text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                Ve a la pestaña <strong>"Productos"</strong> y pulsa el botón naranja <strong>"+ Nuevo Producto"</strong>. Completa el nombre, precio y sube una foto linda. ¡Listo!
+                                            </p>
+                                        </details>
+                                    </div>
+
+                                    <div className="p-4">
+                                        <details className="group">
+                                            <summary className="flex justify-between items-center font-medium cursor-pointer list-none text-gray-800 hover:text-orange-600 transition-colors">
+                                                ¿Cómo pauso un producto que no tengo?
+                                                <span className="group-open:rotate-180 transition-transform">▼</span>
+                                            </summary>
+                                            <p className="mt-4 text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                En la lista de productos, verás un botón verde que dice <strong>"Disponible"</strong>. Haz clic ahí y cambiará a rojo <strong>"Agotado"</strong>. Los clientes verán el producto pero no podrán pedirlo.
+                                            </p>
+                                        </details>
+                                    </div>
+
+                                    <div className="p-4">
+                                        <details className="group">
+                                            <summary className="flex justify-between items-center font-medium cursor-pointer list-none text-gray-800 hover:text-orange-600 transition-colors">
+                                                ¿Cómo funciona el sonido de pedidos?
+                                                <span className="group-open:rotate-180 transition-transform">▼</span>
+                                            </summary>
+                                            <p className="mt-4 text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                En la pestaña <strong>"Pedidos"</strong>, activa el botón de la campana 🔔.
+                                                IMPORTANTE: Debes tener la página abierta (aunque sea en segundo plano) para escuchar el sonido.
+                                                Si estás en el celular, asegúrate de que no esté en modo "No Molestar".
+                                            </p>
+                                        </details>
+                                    </div>
+
+                                    <div className="p-4">
+                                        <details className="group">
+                                            <summary className="flex justify-between items-center font-medium cursor-pointer list-none text-gray-800 hover:text-orange-600 transition-colors">
+                                                ¿Cómo instalo el panel en mi celular?
+                                                <span className="group-open:rotate-180 transition-transform">▼</span>
+                                            </summary>
+                                            <p className="mt-4 text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                Haz clic en el botón <strong>"Instalar App"</strong> que ves arriba a la derecha en la barra de navegación. Esto creará un icono directo en tu pantalla de inicio para que entres como una aplicación común.
+                                            </p>
+                                        </details>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+                    )}
 
-                            <div className="grid gap-6 md:grid-cols-2">
-                                {/* Paso 1: Configuración Inicial */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-orange-100">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <span className="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold text-xl">1</span>
-                                        <h3 className="text-xl font-bold text-gray-800">Primeros Pasos</h3>
-                                    </div>
-                                    <ul className="space-y-3 text-gray-600">
-                                        <li className="flex gap-2"><span>✅</span> <strong>Link de Tienda:</strong> Copia tu link en el botón arriba (📋) y pégalo en tu biografía de Instagram o estados de WhatsApp.</li>
-                                        <li className="flex gap-2"><span>🎨</span> <strong>Marca:</strong> Ve a <strong>Configuración</strong> para subir tu logo, elegir tu color y poner el nombre de tu negocio.</li>
-                                        <li className="flex gap-2"><span>⏰</span> <strong>Horarios:</strong> Configura tus turnos (mañana/noche) para que los clientes sepan cuándo estás abierto.</li>
-                                    </ul>
-                                </div>
+                    {isModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
+                            <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl relative my-auto">
+                                <h3 className="text-xl font-bold mb-4">{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</h3>
+                                <form action={async (formData) => {
+                                    setLoading(true);
+                                    // Add store_id manual if needed, but actions usually handle it via RLS + getAuthStore
+                                    // Just ensure we pass necessary data
+                                    const name = formData.get('name') as string;
+                                    const price = parseFloat(formData.get('price') as string);
+                                    const categoryId = formData.get('category') as string;
+                                    const description = formData.get('description') as string;
+                                    const imageFile = formData.get('image') as File;
 
-                                {/* Paso 2: Productos */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-blue-100">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <span className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-xl">2</span>
-                                        <h3 className="text-xl font-bold text-gray-800">Tus Productos</h3>
-                                    </div>
-                                    <ul className="space-y-3 text-gray-600">
-                                        <li className="flex gap-2"><span>📂</span> <strong>Categorías:</strong> En Configuración, crea categorías como "Pizzas", "Bebidas", etc.</li>
-                                        <li className="flex gap-2"><span>➕</span> <strong>Carga Inicial:</strong> En la pestaña <strong>Productos</strong>, haz clic en "+ Nuevo Producto". Agrega fotos y precios realistas.</li>
-                                        <li className="flex gap-2"><span>🚫</span> <strong>Stock:</strong> Si un producto se agota, usa el botón "Agotado" para que no se muestre en el menú.</li>
-                                    </ul>
-                                </div>
+                                    let imageUrl = editingProduct?.image_url;
 
-                                {/* Paso 3: Logística */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-green-100">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <span className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-bold text-xl">3</span>
-                                        <h3 className="text-xl font-bold text-gray-800">Envíos y Entregas</h3>
-                                    </div>
-                                    <ul className="space-y-3 text-gray-600">
-                                        <li className="flex gap-2"><span>🛵</span> <strong>Zonas de Delivery:</strong> En Configuración, agrega las zonas donde repartes y el costo de envío de cada una.</li>
-                                        <li className="flex gap-2"><span>🏃</span> <strong>Retiro en Local:</strong> Está activo por defecto. Los clientes pueden elegir retirar sin costo extra.</li>
-                                        <li className="flex gap-2"><span>⏱️</span> <strong>Demora de Cocina:</strong> En la pestaña <strong>Pedidos</strong>, aumenta la demora (+15) si estás muy cargado. Se avisará al cliente antes de comprar.</li>
-                                    </ul>
-                                </div>
+                                    if (imageFile && imageFile.size > 0) {
+                                        const uploadRes = await uploadProductImage(imageFile);
+                                        if (!uploadRes) return alert("Error subiendo imagen");
+                                        imageUrl = uploadRes;
+                                    }
 
-                                {/* Paso 4: Ventas y Clientes */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-purple-100">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <span className="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold text-xl">4</span>
-                                        <h3 className="text-xl font-bold text-gray-800">Crecimiento</h3>
+                                    const result = editingProduct
+                                        ? await updateProduct(editingProduct.id, formData)
+                                        : await createProduct(formData);
+
+                                    setLoading(false);
+
+                                    if (result.success) {
+                                        setIsModalOpen(false);
+                                        setEditingProduct(null);
+                                        loadData();
+                                    } else {
+                                        alert("Error: " + result.message);
+                                    }
+                                }} className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Nombre</label>
+                                        <input name="name" required defaultValue={editingProduct?.name} className="w-full border p-2 rounded focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Ej: Pizza Muzzarella" />
                                     </div>
-                                    <ul className="space-y-3 text-gray-600">
-                                        <li className="flex gap-2"><span>🔊</span> <strong>Sonido de Alerta:</strong> Haz clic en "Activar Sonido" en Pedidos para escuchar un timbre cuando llega un pedido nuevo.</li>
-                                        <li className="flex gap-2"><span>📱</span> <strong>WhatsApp Marketing:</strong> En la pestaña <strong>Clientes</strong>, verás quiénes no compran hace 20 días. Haz clic en 💬 para mandarles una promo.</li>
-                                        <li className="flex gap-2"><span>📈</span> <strong>Ranking:</strong> Mira qué es lo que más vendes en <strong>Estadísticas</strong> para armar combos.</li>
-                                    </ul>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Precio</label>
+                                        <input name="price" type="number" required defaultValue={editingProduct?.base_price} className="w-full border p-2 rounded focus:ring-2 focus:ring-orange-500 outline-none" placeholder="0" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Categoría</label>
+                                        <select name="category" required defaultValue={editingProduct?.category_id || categories[0]?.id} className="w-full border p-2 rounded focus:ring-2 focus:ring-orange-500 outline-none bg-white">
+                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Descripción (Opcional)</label>
+                                        <textarea name="description" defaultValue={editingProduct?.description} className="w-full border p-2 rounded focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Ingredientes, detalles..." />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Imagen</label>
+                                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition relative">
+                                            <input
+                                                type="file"
+                                                name="image"
+                                                accept="image/*"
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                onChange={(e) => {
+                                                    if (e.target.files?.[0]) {
+                                                        // Preview logic could go here
+                                                    }
+                                                }}
+                                            />
+                                            <span className="text-gray-500 text-sm">Tocá para subir foto 📸</span>
+                                        </div>
+                                        {editingProduct?.image_url && (
+                                            <div className="mt-2 relative h-20 w-full rounded overflow-hidden">
+                                                <Image src={editingProduct.image_url} alt="Preview" fill className="object-contain" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button disabled={loading} className="w-full bg-orange-600 text-white font-bold py-3 rounded-xl hover:bg-orange-700 transition disabled:bg-gray-400">
+                                        {loading ? 'Guardando...' : 'Guardar Producto'}
+                                    </button>
+                                    <button type="button" onClick={() => setIsModalOpen(false)} className="w-full text-gray-500 py-3 font-medium">Cancelar</button>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {confirmation && (
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+                            <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl">
+                                <p className="mb-4 font-bold text-gray-800 text-lg">{confirmation.message}</p>
+                                <div className="flex gap-3">
+                                    <button onClick={() => setConfirmation(null)} className="flex-1 py-2 bg-gray-100 rounded-lg font-medium text-gray-700 hover:bg-gray-200">No</button>
+                                    <button onClick={() => { confirmation.onConfirm(); setConfirmation(null); }} className="flex-1 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700">Sí</button>
                                 </div>
                             </div>
+                        </div>
+                    )}
 
-                            <div className="bg-blue-600 text-white p-8 rounded-3xl shadow-xl flex flex-col items-center text-center gap-4">
-                                <h3 className="text-2xl font-bold">¿Necesitas ayuda personalizada?</h3>
-                                <p className="opacity-90 max-w-lg text-lg">Nuestro equipo técnico está listo para ayudarte a configurar tu cuenta o resolver cualquier duda.</p>
-                                <a
-                                    href="https://wa.me/5493454286955"
-                                    target="_blank"
-                                    className="bg-white text-blue-600 px-8 py-3 rounded-full font-bold text-lg hover:bg-blue-50 transition transform hover:scale-105 shadow-lg"
-                                >
-                                    Hablar con Soporte 💬
-                                </a>
-                            </div>
-
-                            <div className="bg-gray-100 p-6 rounded-2xl border border-gray-200">
-                                <h4 className="font-bold text-gray-800 mb-4">Preguntas Frecuentes</h4>
-                                <div className="space-y-4">
-                                    <details className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 group">
-                                        <summary className="font-bold cursor-pointer list-none flex justify-between items-center group-open:text-orange-600">
-                                            ¿Cómo recibo el dinero de mis pedidos?
-                                            <span className="group-open:rotate-180 transition-transform">▼</span>
-                                        </summary>
-                                        <p className="mt-4 text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                            Por ahora, los pedidos llegan directamente a tu panel y los clientes pagan al recibir (efectivo/transferencia) o mediante el link de pago que les envíes por WhatsApp. Estamos trabajando en la integración directa de Mercado Pago.
-                                        </p>
-                                    </details>
-                                    <details className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 group">
-                                        <summary className="font-bold cursor-pointer list-none flex justify-between items-center group-open:text-orange-600">
-                                            ¿Qué pasa cuando termina mi prueba gratuita?
-                                            <span className="group-open:rotate-180 transition-transform">▼</span>
-                                        </summary>
-                                        <p className="mt-4 text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                            Al finalizar los 30 días, el sistema te pedirá activar una suscripción mensual. Si no lo haces, la tienda se desactivará pero no perderás tus datos (productos y clientes), podrás volver cuando quieras.
-                                        </p>
-                                    </details>
-                                    <details className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 group">
-                                        <summary className="font-bold cursor-pointer list-none flex justify-between items-center group-open:text-orange-600">
-                                            ¿Cómo instalo el panel en mi celular?
-                                            <span className="group-open:rotate-180 transition-transform">▼</span>
-                                        </summary>
-                                        <p className="mt-4 text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                            Haz clic en el botón <strong>"Instalar App"</strong> que ves arriba a la derecha en la barra de navegación. Esto creará un icono directo en tu pantalla de inicio para que entres como una aplicación común.
-                                        </p>
-                                    </details>
+                    {deleteModalOpen && (
+                        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                            <div className="bg-white rounded-xl max-w-md w-full p-8 shadow-2xl border-2 border-red-100 text-center">
+                                <h3 className="text-2xl font-bold mb-4 text-red-600">⚠️ Eliminar Cuenta</h3>
+                                <p className="text-gray-600 mb-6 text-sm">Esta acción es irreversible. Escribe <strong>ELIMINAR</strong> para confirmar.</p>
+                                <input className="w-full border p-3 rounded mb-4 text-center" placeholder="Escribe ELIMINAR" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} />
+                                <div className="flex gap-3">
+                                    <button onClick={() => setDeleteModalOpen(false)} className="flex-1 py-3 bg-gray-100 font-bold rounded-lg transition hover:bg-gray-200">Cancelar</button>
+                                    <button disabled={deleteInput !== 'ELIMINAR'} onClick={async () => {
+                                        const { deleteAccount } = await import('@/actions/settingsActions');
+                                        const res = await deleteAccount();
+                                        if (res.success) window.location.href = '/login'; else alert(res.message);
+                                    }} className={`flex-1 py-3 font-bold text-white rounded-lg transition ${deleteInput === 'ELIMINAR' ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-300'}`}>Confirmar</button>
                                 </div>
                             </div>
                         </div>
                     )}
                 </main>
-            )}
-
-            {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
-                    <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl relative my-auto">
-                        <h3 className="text-xl font-bold mb-4">{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</h3>
-                        <form action={async (formData) => {
-                            if (editingProduct) await updateProduct(editingProduct.id, formData);
-                            else await createProduct(formData);
-                            setIsModalOpen(false); loadData();
-                        }} className="space-y-4">
-                            <input name="name" placeholder="Nombre" defaultValue={editingProduct?.name} required className="w-full border p-2 rounded" />
-                            <textarea name="description" placeholder="Descripción" defaultValue={editingProduct?.description} className="w-full border p-2 rounded" />
-                            <input name="price" type="number" placeholder="Precio" defaultValue={editingProduct?.base_price} required className="w-full border p-2 rounded" />
-                            <select name="categoryId" defaultValue={editingProduct?.category_id || categories[0]?.id} className="w-full border p-2 rounded capitalize">
-                                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                            </select>
-                            <div className="space-y-2">
-                                <label className="block text-sm font-bold text-gray-700">Imagen</label>
-                                <div className="flex gap-2">
-                                    <input
-                                        name="image"
-                                        placeholder="URL Imagen"
-                                        value={imageUrl}
-                                        onChange={(e) => setImageUrl(e.target.value)}
-                                        className="flex-1 border p-2 rounded"
-                                    />
-                                    <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded flex items-center gap-2 transition ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                        <span className="text-xl">📷</span>
-                                        <span className="text-sm font-medium">{uploading ? '...' : 'Subir'}</span>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            disabled={uploading}
-                                            onChange={async (e) => {
-                                                if (e.target.files && e.target.files[0]) {
-                                                    setUploading(true);
-                                                    try {
-                                                        const url = await uploadProductImage(e.target.files[0]);
-                                                        setImageUrl(url);
-                                                    } catch (err) {
-                                                        alert('Error subiendo imagen: ' + (err as any).message);
-                                                    } finally {
-                                                        setUploading(false);
-                                                    }
-                                                }
-                                            }}
-                                        />
-                                    </label>
-                                </div>
-                                {imageUrl && (
-                                    <div className="relative h-40 w-full bg-gray-100 rounded overflow-hidden border border-gray-200">
-                                        <Image src={imageUrl} alt="Preview" fill className="object-contain" />
-                                    </div>
-                                )}
-                            </div>
-                            <button className="w-full bg-orange-600 text-white font-bold py-2 rounded">Guardar</button>
-                            <button type="button" onClick={() => setIsModalOpen(false)} className="w-full text-gray-500 py-2">Cancelar</button>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {confirmation && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
-                    <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl">
-                        <p className="mb-4 font-bold">{confirmation.message}</p>
-                        <div className="flex gap-2">
-                            <button onClick={() => setConfirmation(null)} className="flex-1 py-2 bg-gray-100 rounded">No</button>
-                            <button onClick={() => { confirmation.onConfirm(); setConfirmation(null); }} className="flex-1 py-2 bg-red-600 text-white rounded">Sí</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {deleteModalOpen && (
-                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl max-w-md w-full p-8 shadow-2xl border-2 border-red-100 text-center">
-                        <h3 className="text-2xl font-bold mb-4 text-red-600">⚠️ Eliminar Cuenta</h3>
-                        <p className="text-gray-600 mb-6 text-sm">Esta acción es irreversible. Escribe <strong>ELIMINAR</strong> para confirmar.</p>
-                        <input className="w-full border p-3 rounded mb-4 text-center" placeholder="Escribe ELIMINAR" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} />
-                        <div className="flex gap-3">
-                            <button onClick={() => setDeleteModalOpen(false)} className="flex-1 py-3 bg-gray-100 font-bold rounded-lg transition hover:bg-gray-200">Cancelar</button>
-                            <button disabled={deleteInput !== 'ELIMINAR'} onClick={async () => {
-                                const { deleteAccount } = await import('@/actions/settingsActions');
-                                const res = await deleteAccount();
-                                if (res.success) window.location.href = '/login'; else alert(res.message);
-                            }} className={`flex-1 py-3 font-bold text-white rounded-lg transition ${deleteInput === 'ELIMINAR' ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-300'}`}>Confirmar</button>
-                        </div>
-                    </div>
-                </div>
             )}
         </div>
     );
@@ -1608,7 +1605,7 @@ function OrdersList({ orders, updateOrderStatus, archiveOrder, loadData }: { ord
     if (orders.length === 0) return <p className="text-gray-500 text-center py-10">Esperando pedidos...</p>;
 
     return (
-        <>
+        <div className="space-y-4">
             {orders.map((order) => {
                 const elapsed = (now - new Date(order.created_at).getTime()) / 60000;
                 let statusColor = 'border-gray-100';
@@ -1667,6 +1664,6 @@ function OrdersList({ orders, updateOrderStatus, archiveOrder, loadData }: { ord
                     </div>
                 );
             })}
-        </>
+        </div>
     );
 }
