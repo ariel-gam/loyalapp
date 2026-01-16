@@ -1540,6 +1540,15 @@ export default function AdminPage() {
                                         imageUrl = uploadRes;
                                     }
 
+                                    // FIX: Update formData with the string URL, replacing the File object
+                                    if (imageUrl) {
+                                        formData.set('image', imageUrl);
+                                    }
+
+                                    // FIX: Ensure category is present (it is named 'category' in input)
+                                    // But let's verify if server expects 'categoryId' or 'category'
+                                    // We will fix the server action to read 'category' too.
+
                                     const result = editingProduct
                                         ? await updateProduct(editingProduct.id, formData)
                                         : await createProduct(formData);

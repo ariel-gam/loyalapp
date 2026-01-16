@@ -133,7 +133,7 @@ export async function createProduct(formData: FormData) {
         const name = formData.get('name') as string;
         const description = formData.get('description') as string;
         const price = Number(formData.get('price'));
-        const categoryId = formData.get('categoryId') as string;
+        const categoryId = formData.get('category') as string;
         const image = formData.get('image') as string;
 
         const { data, error } = await supabase
@@ -172,7 +172,7 @@ export async function updateProduct(id: string, formData: FormData) {
         const name = formData.get('name') as string;
         const description = formData.get('description') as string;
         const price = Number(formData.get('price'));
-        const categoryId = formData.get('categoryId') as string;
+        const categoryId = formData.get('category') as string;
         const image = formData.get('image') as string;
 
         const { error } = await supabase
