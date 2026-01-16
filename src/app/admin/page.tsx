@@ -85,6 +85,8 @@ export default function AdminPage() {
     // Category Management State
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
+    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set()); // New state
+
 
     // Automatic Delay Monitor
     useEffect(() => {
@@ -153,6 +155,7 @@ export default function AdminPage() {
                 setStoreInfo(info);
                 if (info.categories && Array.isArray(info.categories)) {
                     setCategories(info.categories);
+                    setExpandedCategories(new Set(info.categories.map((c: any) => c.id))); // Expand all by default
                 }
                 if (info.schedule) {
                     let initialRanges = Array.isArray(info.schedule.ranges) ? info.schedule.ranges : [];
@@ -756,58 +759,75 @@ export default function AdminPage() {
                                     if (categoryProducts.length === 0) return null;
 
                                     return (
-                                        <div key={category.id}>
-                                            <h3 className="text-xl font-bold text-gray-700 mb-4 border-b pb-2 flex items-center gap-2">
-                                                <span className="bg-orange-100 text-orange-600 w-8 h-8 flex items-center justify-center rounded-lg text-sm">
-                                                    {categoryProducts.length}
+                                    return (
+                                        <div key={category.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                                            <div
+                                                onClick={() => {
+                                                    const newSet = new Set(expandedCategories);
+                                                    if (newSet.has(category.id)) newSet.delete(category.id);
+                                                    else newSet.add(category.id);
+                                                    setExpandedCategories(newSet);
+                                                }}
+                                                className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition select-none"
+                                            >
+                                                <h3 className="text-xl font-bold text-gray-700 flex items-center gap-3">
+                                                    <span className="bg-orange-100 text-orange-600 w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold">
+                                                        {categoryProducts.length}
+                                                    </span>
+                                                    {category.name}
+                                                </h3>
+                                                <span className={`transform transition-transform duration-200 text-gray-400 ${expandedCategories.has(category.id) ? 'rotate-180' : ''}`}>
+                                                    ▼
                                                 </span>
-                                                {category.name}
-                                            </h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                {categoryProducts.map((product) => (
-                                                    <div
-                                                        key={product.id}
-                                                        className={`rounded-xl shadow-sm border overflow-hidden relative group transition-all cursor-pointer ${selectedProducts.has(product.id) ? 'ring-2 ring-orange-500 border-orange-500 bg-orange-50' : 'bg-white border-gray-100 hover:shadow-md'}`}
-                                                        onClick={(e) => {
-                                                            // Allow clicking anywhere on card to select, unless clicking a button
-                                                            if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('button')) return;
-                                                            const newSet = new Set(selectedProducts);
-                                                            if (newSet.has(product.id)) newSet.delete(product.id);
-                                                            else newSet.add(product.id);
-                                                            setSelectedProducts(newSet);
-                                                        }}
-                                                    >
-                                                        <div className="absolute top-2 left-2 z-10">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={selectedProducts.has(product.id)}
-                                                                onChange={() => { }} // Handled by parent click
-                                                                className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 cursor-pointer shadow-sm border-gray-300"
-                                                            />
-                                                        </div>
-                                                        <div className="h-48 relative bg-gray-100">
-                                                            {product.image_url && <Image src={product.image_url} alt={product.name} fill className="object-cover" />}
-                                                        </div>
-                                                        <div className="p-4">
-                                                            <h3 className="font-bold text-gray-900">{product.name}</h3>
-                                                            <div className="flex justify-between items-center mb-3">
-                                                                <span className="font-bold text-lg">${product.base_price?.toLocaleString('es-AR')}</span>
-                                                                <button onClick={() => handleToggle(product.id, product.is_available)} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${product.is_available !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
-                                                                    {product.is_available !== false ? 'Disponible' : 'Agotado'}
-                                                                </button>
-                                                            </div>
-                                                            <div className="flex gap-2 pt-2 border-t border-gray-100">
-                                                                <button onClick={() => handleEditProduct(product)} className="flex-1 bg-blue-50 text-blue-600 text-sm font-medium py-1.5 rounded hover:bg-blue-100 transition flex items-center justify-center gap-1">
-                                                                    ✏️ Editar
-                                                                </button>
-                                                                <button onClick={() => handleDeleteProduct(product.id)} className="flex-1 bg-red-50 text-red-600 text-sm font-medium py-1.5 rounded hover:bg-red-100 transition flex items-center justify-center gap-1">
-                                                                    🗑 Eliminar
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
                                             </div>
+
+                                            {expandedCategories.has(category.id) && (
+                                                <div className="p-4 pt-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-top-2">
+                                                    {categoryProducts.map((product) => (
+                                                        <div
+                                                            key={product.id}
+                                                            className={`rounded-xl shadow-sm border overflow-hidden relative group transition-all cursor-pointer ${selectedProducts.has(product.id) ? 'ring-2 ring-orange-500 border-orange-500 bg-orange-50' : 'bg-white border-gray-100 hover:shadow-md'}`}
+                                                            onClick={(e) => {
+                                                                // Allow clicking anywhere on card to select, unless clicking a button
+                                                                if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('button')) return;
+                                                                const newSet = new Set(selectedProducts);
+                                                                if (newSet.has(product.id)) newSet.delete(product.id);
+                                                                else newSet.add(product.id);
+                                                                setSelectedProducts(newSet);
+                                                            }}
+                                                        >
+                                                            <div className="absolute top-2 left-2 z-10">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedProducts.has(product.id)}
+                                                                    onChange={() => { }} // Handled by parent click
+                                                                    className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 cursor-pointer shadow-sm border-gray-300"
+                                                                />
+                                                            </div>
+                                                            <div className="h-48 relative bg-gray-100">
+                                                                {product.image_url && <Image src={product.image_url} alt={product.name} fill className="object-cover" />}
+                                                            </div>
+                                                            <div className="p-4">
+                                                                <h3 className="font-bold text-gray-900">{product.name}</h3>
+                                                                <div className="flex justify-between items-center mb-3">
+                                                                    <span className="font-bold text-lg">${product.base_price?.toLocaleString('es-AR')}</span>
+                                                                    <button onClick={() => handleToggle(product.id, product.is_available)} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${product.is_available !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
+                                                                        {product.is_available !== false ? 'Disponible' : 'Agotado'}
+                                                                    </button>
+                                                                </div>
+                                                                <div className="flex gap-2 pt-2 border-t border-gray-100">
+                                                                    <button onClick={() => handleEditProduct(product)} className="flex-1 bg-blue-50 text-blue-600 text-sm font-medium py-1.5 rounded hover:bg-blue-100 transition flex items-center justify-center gap-1">
+                                                                        ✏️ Editar
+                                                                    </button>
+                                                                    <button onClick={() => handleDeleteProduct(product.id)} className="flex-1 bg-red-50 text-red-600 text-sm font-medium py-1.5 rounded hover:bg-red-100 transition flex items-center justify-center gap-1">
+                                                                        🗑 Eliminar
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
