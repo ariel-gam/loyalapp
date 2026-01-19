@@ -91,7 +91,7 @@ export default function RegistroPage() {
 
                         <div className="pt-4 text-center">
                             <p className="text-xs text-gray-500 mb-4 italic">
-                                * Comienza tu prueba gratis hoy. Sin tarjeta de crédito.
+                                * Tu primer pago habilita 45 días de servicio y toda la configuración inicial.
                             </p>
                             <button
                                 type="submit"

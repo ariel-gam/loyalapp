@@ -22,7 +22,7 @@ export default function LandingPage() {
               href="/registro"
               className="bg-orange-600 text-white px-6 py-2.5 rounded-full font-bold hover:bg-orange-700 transition shadow-lg shadow-orange-500/20 text-sm"
             >
-              Empezar Gratis
+              Empezar Ahora
             </Link>
           </div>
         </div>
@@ -50,7 +50,7 @@ export default function LandingPage() {
                 href="/registro"
                 className="bg-orange-600 text-white text-lg px-8 py-4 rounded-xl font-bold hover:bg-orange-700 transition shadow-xl shadow-orange-500/20"
               >
-                Empezar Gratis Ahora
+                Obtener Oferta 45 Días
               </Link>
               <Link
                 href="/demo-pizza"
@@ -61,7 +61,7 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className="mt-6 text-sm text-slate-400">
-              ✅ Cancelas cuando quieras
+              ✅ Configuración y Carga de Menú Incluida
             </p>
           </div>
 
@@ -336,22 +336,22 @@ export default function LandingPage() {
               <div className="absolute top-0 right-0 bg-orange-500 text-white text-xs font-bold px-4 py-2 rounded-bl-2xl rounded-tr-[1.8rem]">
                 MÁS ELEGIDO
               </div>
-              <h3 className="text-slate-500 font-bold uppercase tracking-wider text-sm mb-2">Plan Profesional</h3>
+              <h3 className="text-slate-500 font-bold uppercase tracking-wider text-sm mb-2">Paquete de Bienvenida</h3>
               <div className="flex items-baseline gap-2 mb-6">
                 <span className="text-5xl font-extrabold text-slate-900">$60.000</span>
-                <span className="text-slate-500">/ mes</span>
+                <span className="text-slate-500">/ 45 días</span>
               </div>
 
               <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl mb-8 flex items-center gap-3">
                 <span className="text-2xl">🎁</span>
                 <div>
-                  <p className="font-bold text-orange-800 text-sm">Promo Primer Mes</p>
-                  <p className="text-orange-600 font-bold text-lg">$35.000 ARS</p>
+                  <p className="font-bold text-orange-800 text-sm">Pagás 1 Mes + 15 Días GRATIS</p>
+                  <p className="text-orange-600 font-bold text-xs">Atención por apertura</p>
                 </div>
               </div>
 
               <ul className="space-y-4 mb-8 text-slate-700">
-                {['Menú Digital', 'Pedidos Ilimitados', 'Panel de Administración', '0% Comisiones', 'Soporte Técnico', 'Hosting Incluido'].map((f, i) => (
+                {['Configuración y Carga de Menú Incluida', 'Pago Único: 45 Días de Servicio', 'Menú Digital', 'Pedidos Ilimitados', 'Panel de Administración', '0% Comisiones', 'Soporte Técnico', 'Hosting Incluido'].map((f, i) => (
                   <li key={i} className="flex items-center gap-3">
                     <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs">✓</span>
                     {f}
@@ -360,7 +360,7 @@ export default function LandingPage() {
               </ul>
 
               <Link href="/registro" className="block w-full bg-slate-900 text-white text-center py-4 rounded-xl font-bold text-lg hover:bg-slate-800 transition">
-                Crear mi Cuenta Ahora
+                Empezar Ahora
               </Link>
             </div>
           </div>
