@@ -20,11 +20,10 @@ export async function createSubscriptionPreference() {
 
     if (!store) throw new Error("Tienda no encontrada");
 
-    // Check if user has used promo (First month 35k, then 60k)
-    // We store 'promo_used' in settings JSON
-    const promoUsed = store.settings?.promo_used === true;
-    const price = promoUsed ? 60000 : 35000;
-    const title = promoUsed ? 'Suscripción Mensual - LoyalApp' : 'Suscripción Mensual (Promo) - LoyalApp';
+    // Fixed Price for "Paquete Bienvenida" (1 Month + 15 Days Free)
+    // The previous promo logic is replaced by this standard offer.
+    const price = 60000;
+    const title = 'Paquete Bienvenida (45 Días) - LoyalApp';
 
     const preference = new Preference(client);
 
