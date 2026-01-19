@@ -351,7 +351,7 @@ export default function LandingPage() {
               </div>
 
               <ul className="space-y-4 mb-8 text-slate-700">
-                {['Configuración y Carga de Menú Incluida', 'Pago Único: 45 Días de Servicio', 'Menú Digital', 'Pedidos Ilimitados', 'Panel de Administración', '0% Comisiones', 'Soporte Técnico', 'Hosting Incluido'].map((f, i) => (
+                {['Configuración y Carga de Menú Incluida', 'Pagás un mes y te bonificamos 15 días más', 'Menú Digital', 'Pedidos Ilimitados', 'Panel de Administración', '0% Comisiones', 'Soporte Técnico', 'Hosting Incluido'].map((f, i) => (
                   <li key={i} className="flex items-center gap-3">
                     <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs">✓</span>
                     {f}
