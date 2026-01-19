@@ -1731,7 +1731,7 @@ function OrdersList({ orders, updateOrderStatus, archiveOrder, loadData }: { ord
                             <span className="text-2xl font-bold text-green-600">${order.total_amount?.toLocaleString('es-AR')}</span>
                             <div className="flex items-center gap-2">
                                 {/* Button: Confirm Receipt */}
-                                <a href={`https://wa.me/${order.customers?.phone}?text=${encodeURIComponent(\`Hola! Recibimos tu pedido #${order.id.slice(0, 4)}. Lo estamos preparando! 🍳 Te avisaremos cuando salga.\`)}`} target="_blank" className="text-xs bg-indigo-500 text-white px-2 py-1 rounded shadow-sm no-underline transition hover:bg-indigo-600">✅ Confirmar</a>
+                                <a href={"https://wa.me/" + order.customers?.phone + "?text=" + encodeURIComponent("Hola! Recibimos tu pedido #" + (order.id || "").slice(0, 4) + ". Lo estamos preparando! 🍳 Te avisaremos cuando salga.")} target="_blank" className="text-xs bg-indigo-500 text-white px-2 py-1 rounded shadow-sm no-underline transition hover:bg-indigo-600">✅ Confirmar</a>
                             {order.delivery_method === 'delivery' && (
                                 <a href={`https://wa.me/${order.customers?.phone}?text=${encodeURIComponent('Hola, tu pedido salió en camino! 🛵')}`} target="_blank" className="text-xs bg-blue-500 text-white px-2 py-1 rounded shadow-sm no-underline transition hover:bg-blue-600">🛵 Avisar salida</a>
                             )}
