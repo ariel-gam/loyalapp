@@ -1730,34 +1730,36 @@ function OrdersList({ orders, updateOrderStatus, archiveOrder, loadData }: { ord
                         <div className="flex flex-col items-end justify-center gap-2">
                             <span className="text-2xl font-bold text-green-600">${order.total_amount?.toLocaleString('es-AR')}</span>
                             <div className="flex items-center gap-2">
-                                {order.delivery_method === 'delivery' && (
-                                    <a href={`https://wa.me/${order.customers?.phone}?text=${encodeURIComponent('Hola, tu pedido salió en camino! 🛵')}`} target="_blank" className="text-xs bg-blue-500 text-white px-2 py-1 rounded shadow-sm no-underline transition hover:bg-blue-600">🛵 Avisar salida</a>
-                                )}
-                                {order.delivery_method === 'pickup' && (
-                                    <a href={`https://wa.me/${order.customers?.phone}?text=${encodeURIComponent('¡Hola! Tu pedido ya está listo para retirar. ¡Te esperamos! 🍕')}`} target="_blank" className="text-xs bg-orange-500 text-white px-2 py-1 rounded shadow-sm no-underline transition hover:bg-orange-600">🔔 Avisar retiro</a>
-                                )}
-                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${order.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-white border border-gray-200 text-gray-600'}`}>{order.status === 'paid' ? 'Completado' : 'Pendiente'}</span>
-                                {order.status !== 'paid' && (
-                                    <>
-                                        <button
-                                            onClick={async () => {
-                                                if (confirm('¿Estás seguro de que quieres cancelar este pedido?')) {
-                                                    await archiveOrder(order.id);
-                                                    loadData();
-                                                }
-                                            }}
-                                            className="text-xs text-red-600 hover:text-red-700 font-medium px-2 py-1"
-                                        >
-                                            Cancelar
-                                        </button>
-                                        <button onClick={async () => { await updateOrderStatus(order.id, 'paid'); loadData(); }} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded font-bold transition shadow-lg shadow-green-200 hover:bg-green-700">✔ Completar</button>
-                                    </>
-                                )}
-                            </div>
+                                {/* Button: Confirm Receipt */}
+                                <a href={`https://wa.me/${order.customers?.phone}?text=${encodeURIComponent(\`Hola! Recibimos tu pedido #${order.id.slice(0, 4)}. Lo estamos preparando! 🍳 Te avisaremos cuando salga.\`)}`} target="_blank" className="text-xs bg-indigo-500 text-white px-2 py-1 rounded shadow-sm no-underline transition hover:bg-indigo-600">✅ Confirmar</a>
+                            {order.delivery_method === 'delivery' && (
+                                <a href={`https://wa.me/${order.customers?.phone}?text=${encodeURIComponent('Hola, tu pedido salió en camino! 🛵')}`} target="_blank" className="text-xs bg-blue-500 text-white px-2 py-1 rounded shadow-sm no-underline transition hover:bg-blue-600">🛵 Avisar salida</a>
+                            )}
+                            {order.delivery_method === 'pickup' && (
+                                <a href={`https://wa.me/${order.customers?.phone}?text=${encodeURIComponent('¡Hola! Tu pedido ya está listo para retirar. ¡Te esperamos! 🍕')}`} target="_blank" className="text-xs bg-orange-500 text-white px-2 py-1 rounded shadow-sm no-underline transition hover:bg-orange-600">🔔 Avisar retiro</a>
+                            )}
+                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${order.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-white border border-gray-200 text-gray-600'}`}>{order.status === 'paid' ? 'Completado' : 'Pendiente'}</span>
+                            {order.status !== 'paid' && (
+                                <>
+                                    <button
+                                        onClick={async () => {
+                                            if (confirm('¿Estás seguro de que quieres cancelar este pedido?')) {
+                                                await archiveOrder(order.id);
+                                                loadData();
+                                            }
+                                        }}
+                                        className="text-xs text-red-600 hover:text-red-700 font-medium px-2 py-1"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button onClick={async () => { await updateOrderStatus(order.id, 'paid'); loadData(); }} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded font-bold transition shadow-lg shadow-green-200 hover:bg-green-700">✔ Completar</button>
+                                </>
+                            )}
                         </div>
                     </div>
-                );
-            })}
-        </div>
+                    </div>
+    );
+})}
+        </div >
     );
 }
