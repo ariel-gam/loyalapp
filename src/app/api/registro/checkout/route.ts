@@ -23,7 +23,7 @@ export async function POST(request: Request) {
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
         // --- VALIDAR CUPÓN VIP (si existe) ---
-        let daysToAdd = 15; // Por defecto 15 días
+        let daysToAdd = 0; // Por defecto 0 días (Modo Borrador / Pay-to-Publish)
         let couponData = null;
 
         if (cupon && cupon.trim()) {

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getRecentOrders, getAdminProducts, createProduct, deleteProduct, toggleProductAvailability, getAdminStats, updateProduct, getCustomers, updateOrderStatus, archiveOrder, clearAllOrders, resetAllStats, clearAllCustomers, bulkUpdateProductPrices } from '@/actions/adminActions';
 import { getStoreSettings, updateStoreSettings } from '@/actions/settingsActions';
+import { createSubscriptionPreference } from '@/actions/paymentActions';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import { uploadProductImage } from '@/utils/uploadImage';
@@ -17,7 +18,18 @@ export default function AdminPage() {
     const [storeInfo, setStoreInfo] = useState<any>(null);
     const [storeNotFound, setStoreNotFound] = useState(false);
 
+    const handleActivateSubscription = async () => {
+        try {
+            const url = await createSubscriptionPreference();
+            if (url) window.location.href = url;
+        } catch (error) {
+            console.error(error);
+            alert('Error generando link de pago.');
+        }
+    };
+
     // Data State
+    const [isStoreActive, setIsStoreActive] = useState(true);
     const [orders, setOrders] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [customers, setCustomers] = useState<any[]>([]);
@@ -153,6 +165,12 @@ export default function AdminPage() {
                     return;
                 }
                 setStoreInfo(info);
+                // Check if store is active (Pay-to-Publish)
+                if (info.trial_ends_at && new Date(info.trial_ends_at) > new Date()) {
+                    setIsStoreActive(true);
+                } else {
+                    setIsStoreActive(false);
+                }
                 if (info.categories && Array.isArray(info.categories)) {
                     setCategories(info.categories);
                     setExpandedCategories(new Set(info.categories.map((c: any) => c.id))); // Expand all by default
@@ -500,6 +518,24 @@ export default function AdminPage() {
                 </div>
             ) : (
                 <main className="max-w-7xl mx-auto p-6">
+                    {!isStoreActive && (
+                        <div className="bg-red-600 text-white p-6 mb-8 rounded-xl flex flex-col md:flex-row items-center justify-between shadow-lg border-2 border-red-500 animate-pulse-slow">
+                            <div className="mb-4 md:mb-0">
+                                <h3 className="font-bold text-xl flex items-center gap-2 mb-1">
+                                    🚫 Tu tienda no está visible al público
+                                </h3>
+                                <p className="text-red-100">
+                                    Estás en modo configuración. Para empezar a recibir pedidos, activa tu <strong>Pack de Bienvenida (45 Días).</strong>
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleActivateSubscription}
+                                className="bg-white text-red-600 px-8 py-3 rounded-full font-bold hover:bg-gray-50 transition shadow-xl whitespace-nowrap transform hover:scale-105"
+                            >
+                                ACTIVAR AHORA
+                            </button>
+                        </div>
+                    )}
                     {activeTab === 'orders' && (
                         <div className="space-y-6">
                             {/* Logistics Control Panel */}
