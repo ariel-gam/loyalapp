@@ -107,7 +107,7 @@ export default function RegistroPage() {
                                         Creando Tienda...
                                     </span>
                                 ) : (
-                                    'CREAR TIENDA GRATIS (15 DÍAS)'
+                                    'OBTENER PACK 45 DÍAS'
                                 )}
                             </button>
                         </div>
