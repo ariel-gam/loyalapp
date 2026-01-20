@@ -24,7 +24,10 @@ export default function CartModal({ store }: CartModalProps) {
     const [transferFile, setTransferFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
 
-    const deliveryZones: { id: string; name: string; price: number }[] = store.deliveryZones || store.settings?.deliveryZones || [];
+    const rawZones = store.deliveryZones || store.settings?.deliveryZones;
+    const deliveryZones: { id: string; name: string; price: number }[] = Array.isArray(rawZones)
+        ? rawZones.filter((z: any) => z && typeof z === 'object' && 'id' in z)
+        : [];
     const selectedZone = deliveryZones.find(z => z.id === selectedZoneId);
 
     // Store Constants
