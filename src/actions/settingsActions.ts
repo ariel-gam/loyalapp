@@ -31,6 +31,7 @@ export async function getStoreBySlug(slug: string) {
         id: data.id,
         name: data.name,
         slug: data.slug,
+        trial_ends_at: data.trial_ends_at,
         ...data.settings // Spread JSON settings
     };
 }
