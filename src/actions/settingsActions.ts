@@ -134,3 +134,96 @@ export async function deleteAccount() {
 
     return { success: true };
 }
+
+export async function redeemCoupon(code: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { success: false, message: "No autorizado" };
+
+    // 1. Get Store
+    const { data: store, error: storeError } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('owner_id', user.id)
+        .single();
+
+    if (storeError || !store) return { success: false, message: "Tienda no encontrada" };
+
+    // 2. Validate Coupon
+    // Use Admin Client to bypass RLS on coupons if needed
+    // Assuming we need admin privilege to interact with coupons freely.
+    const adminClient = await getAdminClient();
+
+    const { data: coupon, error: couponError } = await adminClient
+        .from('coupons')
+        .select('*')
+        .eq('code', code.trim().toUpperCase())
+        .eq('active', true)
+        .single();
+
+    if (couponError || !coupon) {
+        return { success: false, message: "Cupón inválido o no encontrado" };
+    }
+
+    // Check expiration
+    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+        return { success: false, message: "Este cupón ha expirado" };
+    }
+
+    // Check usage limits
+    if (coupon.max_uses && coupon.current_uses >= coupon.max_uses) {
+        return { success: false, message: "Este cupón agotó sus usos" };
+    }
+
+    // Check if store already used PROMO
+    // If we want to strictly block multiple coupons:
+    // if (store.settings?.promo_used) return { success: false, message: "Ya has utilizado un cupón de bienvenida" };
+
+    // 3. Apply Coupon
+    const daysToAdd = coupon.days_extension || 30;
+
+    // Calculate new date: If trial is active, add to end. If expired, add to NOW.
+    let currentEnd = store.trial_ends_at ? new Date(store.trial_ends_at) : new Date();
+    if (currentEnd < new Date()) currentEnd = new Date(); // If expired, start from now
+
+    currentEnd.setDate(currentEnd.getDate() + daysToAdd);
+
+    // 4. Update Store
+    const { error: updateError } = await adminClient
+        .from('stores')
+        .update({
+            trial_ends_at: currentEnd.toISOString(),
+            settings: {
+                ...store.settings,
+                promo_used: true, // Mark as used
+                coupon_code: coupon.code
+            }
+        })
+        .eq('id', store.id);
+
+    if (updateError) return { success: false, message: "Error al aplicar el cupón" };
+
+    // 5. Log Usage & Increment Counter
+    await adminClient.from('coupon_usage').insert({
+        coupon_id: coupon.id,
+        store_id: store.id,
+        user_email: user.email
+    });
+
+    await adminClient
+        .from('coupons')
+        .update({ current_uses: (coupon.current_uses || 0) + 1 })
+        .eq('id', coupon.id);
+
+    return { success: true, message: `¡Cupón canjeado! Se agregaron ${daysToAdd} días.` };
+}
+
+async function getAdminClient() {
+    const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
+    return createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+}

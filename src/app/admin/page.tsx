@@ -472,20 +472,54 @@ export default function AdminPage() {
             {/* Content */}
             <main className="max-w-7xl mx-auto p-6">
                 {!isStoreActive && (
-                    <div className="bg-red-600 text-white p-6 mb-8 rounded-xl flex flex-col md:flex-row items-center justify-between shadow-lg border-2 border-red-500 animate-pulse-slow">
-                        <div className="mb-4 md:mb-0">
+                    <div className="bg-red-600 text-white p-6 mb-8 rounded-xl flex flex-col items-center justify-between shadow-lg border-2 border-red-500 animate-pulse-slow gap-4 md:flex-row">
+                        <div className="flex-1">
                             <h3 className="font-bold text-xl flex items-center gap-2 mb-1">
                                 🚫 Tu tienda no está visible al público
                             </h3>
-                            <p className="text-red-100">
-                                Estás en modo configuración. Para empezar a recibir pedidos, activa tu <strong>Pack de Bienvenida (45 Días).</strong>
+                            <p className="text-red-100 mb-2">
+                                Estás en modo configuración. Para empezar a recibir pedidos, activa tu <strong>Pack de Bienvenida.</strong>
                             </p>
+
+                            {/* Coupon Section */}
+                            <div className="flex items-center gap-2 mt-4 bg-red-700/50 p-2 rounded-lg max-w-sm">
+                                <span className="text-xs font-bold uppercase tracking-wider text-red-200">¿Tenés un Cupón?</span>
+                                <input
+                                    type="text"
+                                    placeholder="CÓDIGO"
+                                    className="bg-white text-gray-900 px-3 py-1 rounded text-sm font-bold w-24 uppercase outline-none focus:ring-2 focus:ring-yellow-400"
+                                    onKeyDown={async (e) => {
+                                        if (e.key === 'Enter') {
+                                            const code = e.currentTarget.value;
+                                            if (!code) return;
+                                            setLoading(true);
+                                            try {
+                                                const { redeemCoupon } = await import('@/actions/settingsActions');
+                                                const res = await redeemCoupon(code);
+                                                if (res.success) {
+                                                    alert(res.message);
+                                                    window.location.reload();
+                                                } else {
+                                                    alert(res.message);
+                                                }
+                                            } catch (error) {
+                                                console.error(error);
+                                                alert("Error al canjear cupón");
+                                            } finally {
+                                                setLoading(false);
+                                            }
+                                        }
+                                    }}
+                                />
+                                <span className="text-[10px] text-red-300">(Enter para canjear)</span>
+                            </div>
                         </div>
+
                         <button
                             onClick={handleActivateSubscription}
                             className="bg-white text-red-600 px-8 py-3 rounded-full font-bold hover:bg-gray-50 transition shadow-xl whitespace-nowrap transform hover:scale-105"
                         >
-                            ACTIVAR AHORA
+                            ACTIVAR AHORA ($60k)
                         </button>
                     </div>
                 )}
