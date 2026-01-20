@@ -73,40 +73,58 @@ export default function LandingPage() {
                 {/* Mockup Content: Header */}
                 <div className="h-48 bg-orange-600 rounded-b-[2rem] relative flex items-end p-6">
                   <div className="text-white">
-                    <h3 className="font-bold text-2xl">Pizzería Napoli</h3>
-                    <p className="text-orange-100 text-sm">La mejor de la ciudad 🍕</p>
+                    <h3 className="font-bold text-2xl">Pizza Don Alfredo</h3>
+                    <p className="text-orange-100 text-sm">Pide tu comida favorita 🍕</p>
                   </div>
                 </div>
                 {/* Mockup Content: Categories */}
                 <div className="p-4 space-y-4">
                   <div className="flex gap-2 overflow-x-auto pb-2">
-                    {['Pizzas', 'Empanadas', 'Bebidas'].map((c, i) => (
+                    {['Pizzas', 'Empanadas', 'Hamburguesas'].map((c, i) => (
                       <div key={i} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap ${i === 0 ? 'bg-orange-600 text-white' : 'bg-white shadow-sm border border-slate-100 text-slate-600'}`}>
                         {c}
                       </div>
                     ))}
                   </div>
                   {/* Mockup Content: Items */}
-                  {[1, 2, 3].map((_, i) => (
-                    <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-4">
-                      <div className="w-20 h-20 bg-slate-200 rounded-xl flex-shrink-0 relative overflow-hidden">
-                        <div className="absolute inset-0 flex items-center justify-center text-2xl opacity-50">🍕</div>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-bold text-slate-800">Muzzarella Especial</h4>
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">Salsa de tomate, doble queso muzzarella y orégano.</p>
-                        <div className="flex justify-between items-center mt-3">
-                          <span className="font-bold text-orange-600">$8.500</span>
-                          <div className="w-8 h-8 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold">+</div>
+                  <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-4 relative">
+                    {/* Discount Badge */}
+                    <div className="absolute top-2 left-2 z-10 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
+                      🔥 10% OFF
+                    </div>
+                    <div className="w-20 h-20 bg-slate-200 rounded-xl flex-shrink-0 relative overflow-hidden">
+                      <div className="absolute inset-0 flex items-center justify-center text-2xl opacity-50">🍕</div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-slate-800 text-sm">panceta y verdeo + muzzarella</h4>
+                      <p className="text-[10px] text-slate-500 mt-1 line-clamp-2">Con muzzarella, panceta y verdeo</p>
+                      <div className="flex justify-between items-center mt-2">
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-slate-400 line-through">$14.500</span>
+                          <span className="font-bold text-red-600 text-sm">$13.050</span>
                         </div>
+                        <div className="w-7 h-7 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold text-sm">+</div>
                       </div>
                     </div>
-                  ))}
+                  </div>
+                  <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-4">
+                    <div className="w-20 h-20 bg-slate-200 rounded-xl flex-shrink-0 relative overflow-hidden">
+                      <div className="absolute inset-0 flex items-center justify-center text-2xl opacity-50">🍕</div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-slate-800 text-sm">Pizza calabresa 🍕</h4>
+                      <p className="text-[10px] text-slate-500 mt-1 line-clamp-2">Con mozzarella, chorizo calabrés y orégano</p>
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="font-bold text-orange-600 text-sm">$14.500</span>
+                        <div className="w-7 h-7 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold text-sm">+</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 {/* Mockup Content: Floating Button */}
                 <div className="absolute bottom-4 left-4 right-4 bg-green-500 text-white p-4 rounded-xl font-bold shadow-lg flex justify-between items-center">
                   <span>Ver Pedido (2)</span>
-                  <span>$17.000</span>
+                  <span>$27.550</span>
                 </div>
               </div>
             </div>
