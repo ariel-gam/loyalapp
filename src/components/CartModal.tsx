@@ -502,9 +502,9 @@ export default function CartModal({ store }: CartModalProps) {
                                 <button
                                     onClick={handleCheckout}
                                     disabled={items.length === 0 || isSubmitting}
-                                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-green-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-purple-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70"
                                 >
-                                    <span>{isSubmitting ? 'Procesando...' : 'Confirmar Pedido en WhatsApp'}</span>
+                                    <span>{isSubmitting ? 'Procesando...' : 'PRUEBA DE DEBUG (Purple)'}</span>
                                 </button>
                             </div>
                         )}
