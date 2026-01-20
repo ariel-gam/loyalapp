@@ -30,6 +30,7 @@ export default function CartModal({ store }: CartModalProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [transferFile, setTransferFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     // Enforce Pickup if delivery becomes disabled dynamically
     useEffect(() => {
@@ -93,7 +94,6 @@ export default function CartModal({ store }: CartModalProps) {
     };
 
 
-    const [showSuccess, setShowSuccess] = useState(false);
 
     const handleCheckout = async (e: React.FormEvent) => {
         e.preventDefault();
