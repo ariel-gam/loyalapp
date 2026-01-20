@@ -53,7 +53,7 @@ export default function LandingPage() {
                 Obtener Oferta 45 Días
               </Link>
               <Link
-                href="/demo-pizza"
+                href="/carla"
                 className="bg-white text-slate-700 border border-slate-200 text-lg px-8 py-4 rounded-xl font-bold hover:bg-slate-50 transition flex items-center justify-center gap-2 group"
               >
                 Ver Demo en Vivo
@@ -210,7 +210,7 @@ export default function LandingPage() {
                 ))}
               </ul>
               <div className="mt-10">
-                <Link href="/demo-pizza" className="text-orange-600 font-bold hover:text-orange-700 flex items-center gap-2">
+                <Link href="/carla" className="text-orange-600 font-bold hover:text-orange-700 flex items-center gap-2">
                   Probar el menú como cliente →
                 </Link>
               </div>
@@ -397,7 +397,7 @@ export default function LandingPage() {
           <h2 className="text-2xl font-bold text-white mb-6">LoyalApp</h2>
           <div className="flex justify-center gap-6 mb-8">
             <Link href="/login" className="hover:text-white transition">Admin Login</Link>
-            <Link href="/demo-pizza" className="hover:text-white transition">Demo Cliente</Link>
+            <Link href="/carla" className="hover:text-white transition">Demo Cliente</Link>
             <Link href="https://wa.me/5493454286955" className="hover:text-white transition">WhatsApp Soporte</Link>
           </div>
           <p className="text-sm opacity-50">&copy; 2026 LoyalApp. Todos los derechos reservados.</p>
