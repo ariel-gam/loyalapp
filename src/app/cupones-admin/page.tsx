@@ -135,16 +135,14 @@ export default function CuponesAdminPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Días de Extensión</label>
-                                <select
+                                <input
+                                    type="number"
                                     value={daysExtension}
                                     onChange={(e) => setDaysExtension(Number(e.target.value))}
+                                    min="1"
+                                    max="90"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                >
-                                    <option value={15}>15 días</option>
-                                    <option value={30}>30 días</option>
-                                    <option value={60}>60 días</option>
-                                    <option value={90}>90 días</option>
-                                </select>
+                                />
                             </div>
 
                             <div>
