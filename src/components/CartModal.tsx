@@ -296,15 +296,19 @@ export default function CartModal({ store }: CartModalProps) {
 
                                     {/* Product List */}
                                     <div className="space-y-4">
-                                        {items.map((item) => (
+                                        {items.filter(i => i.product && i.quantity > 0).map((item) => (
                                             <div key={item.product.id} className="flex gap-4">
-                                                <div className="relative h-16 w-16 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
-                                                    <Image
-                                                        src={item.product.image}
-                                                        alt={item.product.name}
-                                                        fill
-                                                        className="object-cover"
-                                                    />
+                                                <div className="relative h-16 w-16 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100 bg-gray-50 flex items-center justify-center">
+                                                    {item.product.image ? (
+                                                        <Image
+                                                            src={item.product.image}
+                                                            alt={item.product.name}
+                                                            fill
+                                                            className="object-cover"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-2xl">🍔</span>
+                                                    )}
                                                 </div>
                                                 <div className="flex-1">
                                                     <div className="flex justify-between items-start mb-1">
