@@ -43,6 +43,7 @@ export default function AdminPage() {
     const [rankingPeriod, setRankingPeriod] = useState<'day' | 'week' | 'month'>('day');
     const [soundEnabled, setSoundEnabled] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [showInactiveOnly, setShowInactiveOnly] = useState(false);
     const [newOrderAlert, setNewOrderAlert] = useState(false);
 
@@ -1063,32 +1064,46 @@ export default function AdminPage() {
                 {activeTab === 'settings' && storeInfo && (
                     <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100">
                         <h2 className="text-2xl font-bold text-gray-800 mb-6">Configuración</h2>
-                        <form action={async (formData) => {
-                            const newSettings = {
-                                store_name: formData.get('store_name'),
-                                address: formData.get('address'),
-                                phone: formData.get('phone'),
-                                logo_url: formData.get('logo_url'),
-                                primary_color: formData.get('primary_color'),
-                                categories: categories,
-                                schedule: schedule,
-                                deliveryZones: deliveryZones,
-                                deliveryEnabled: deliveryEnabled,
-                                cbu: formData.get('cbu'),
-                                alias: formData.get('alias'),
-                                bank_name: formData.get('bank_name')
-                            };
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
 
-                            const res = await updateStoreSettings(newSettings);
-                            if (res.success) {
-                                alert('Guardado!');
-                                // Reload store info to show updated values
-                                const updatedInfo = await getStoreSettings();
-                                if (updatedInfo) {
-                                    setStoreInfo(updatedInfo);
+                            if (!confirm('⚠️ ¿Estás seguro de que deseas guardar estos cambios en la configuración?')) {
+                                return;
+                            }
+
+                            setSaving(true);
+                            try {
+                                const formData = new FormData(e.currentTarget);
+                                const newSettings = {
+                                    store_name: formData.get('store_name'),
+                                    address: formData.get('address'),
+                                    phone: formData.get('phone'),
+                                    logo_url: formData.get('logo_url'),
+                                    primary_color: formData.get('primary_color'),
+                                    categories: categories,
+                                    schedule: schedule,
+                                    deliveryZones: deliveryZones,
+                                    deliveryEnabled: deliveryEnabled,
+                                    cbu: formData.get('cbu'),
+                                    alias: formData.get('alias'),
+                                    bank_name: formData.get('bank_name')
+                                };
+
+                                const res = await updateStoreSettings(newSettings);
+                                if (res.success) {
+                                    alert('✅ Guardado!');
+                                    // Reload store info to show updated values
+                                    const updatedInfo = await getStoreSettings();
+                                    if (updatedInfo) {
+                                        setStoreInfo(updatedInfo);
+                                    }
+                                } else {
+                                    alert('❌ Error: ' + res.message);
                                 }
-                            } else {
-                                alert(res.message);
+                            } catch (err: any) {
+                                alert('❌ Error inesperado: ' + err.message);
+                            } finally {
+                                setSaving(false);
                             }
                         }} className="space-y-4">
                             <div><label className="text-sm font-bold">Nombre</label><input name="store_name" defaultValue={storeInfo.store_name} className="w-full border p-2 rounded" /></div>
@@ -1412,14 +1427,10 @@ export default function AdminPage() {
 
                             <button
                                 type="submit"
-                                onClick={(e) => {
-                                    if (!confirm('⚠️ ¿Estás seguro de que deseas guardar estos cambios en la configuración?')) {
-                                        e.preventDefault();
-                                    }
-                                }}
-                                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded transition"
+                                disabled={saving}
+                                className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-2 rounded transition"
                             >
-                                Guardar Cambios
+                                {saving ? 'Guardando...' : 'Guardar Cambios'}
                             </button>
                         </form>
 
