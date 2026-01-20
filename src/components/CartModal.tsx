@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
 import Image from 'next/image';
 import { submitOrder } from '@/actions/orderActions';
@@ -12,10 +12,17 @@ interface CartModalProps {
 }
 
 export default function CartModal({ store }: CartModalProps) {
+    // Delivery Check
+    // Calculated early to use in state initialization
+    const isDeliveryEnabled = store.deliveryEnabled !== false && store.settings?.deliveryEnabled !== false;
+
     const { items, updateQuantity, totalPrice, isCartOpen, toggleCart, clearCart } = useCart();
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
-    const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('delivery');
+
+    // Initialize with correct method to avoid render loop
+    const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>(isDeliveryEnabled ? 'delivery' : 'pickup');
+
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('cash');
     const [street, setStreet] = useState('');
     const [streetNumber, setStreetNumber] = useState('');
@@ -23,6 +30,13 @@ export default function CartModal({ store }: CartModalProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [transferFile, setTransferFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+
+    // Enforce Pickup if delivery becomes disabled dynamically
+    useEffect(() => {
+        if (!isDeliveryEnabled && deliveryMethod === 'delivery') {
+            setDeliveryMethod('pickup');
+        }
+    }, [isDeliveryEnabled, deliveryMethod]);
 
     const rawZones = store.deliveryZones || store.settings?.deliveryZones;
     const deliveryZones: { id: string; name: string; price: number }[] = Array.isArray(rawZones)
@@ -33,14 +47,6 @@ export default function CartModal({ store }: CartModalProps) {
     // Store Constants
     const storeAddress = store.address || store.settings?.address || 'Dirección no disponible';
     const storePhone = store.phone || store.settings?.phone || '5491112345678';
-
-    // Delivery Check
-    const isDeliveryEnabled = store.deliveryEnabled !== false && store.settings?.deliveryEnabled !== false;
-
-    // Force Pickup if delivery disabled
-    if (!isDeliveryEnabled && deliveryMethod === 'delivery') {
-        setDeliveryMethod('pickup');
-    }
 
     // Calculate final total including delivery
     const deliveryCost = (deliveryMethod === 'delivery' && selectedZone) ? selectedZone.price : 0;
