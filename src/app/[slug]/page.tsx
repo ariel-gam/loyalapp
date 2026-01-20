@@ -6,10 +6,20 @@ import { getProductsBySlug } from '@/actions/catalogActions';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 
+import { Metadata } from 'next';
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 import StoreActions from '@/components/StoreActions';
+import StoreHeader from '@/components/StoreHeader';
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+    const { slug } = await params;
+    return {
+        manifest: `/api/manifest?slug=${slug}`,
+    };
+}
 
 export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
@@ -49,20 +59,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
         <main className="min-h-screen bg-gray-50">
             <style>{`:root { --primary-color: ${store.primary_color || '#f97316'}; }`}</style>
 
-            <header className="bg-white p-4 shadow-sm relative z-10 flex items-center justify-between">
-                <div className="flex-1">
-                    {store.logo_url ? (
-                        <div className="relative h-12 w-32">
-                            <Image src={store.logo_url} alt={store.store_name} fill className="object-contain object-left" priority />
-                        </div>
-                    ) : (
-                        <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">
-                            {store.store_name}
-                        </h1>
-                    )}
-                </div>
-                <StoreActions />
-            </header>
+            <StoreHeader store={store} />
 
             <Catalog slug={slug} initialProducts={products} store={store} />
 

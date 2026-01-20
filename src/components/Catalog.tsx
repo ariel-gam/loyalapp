@@ -187,17 +187,20 @@ export default function Catalog({ slug, initialProducts = [], store }: CatalogPr
                 </div>
             ))}
 
-            {/* Sticky Category Header */}
-            <div className={`sticky ${!isStoreOpen ? 'top-[76px]' : 'top-0'} z-10 bg-white/95 backdrop-blur-sm shadow-sm transition-all`}>
-                <div className="flex overflow-x-auto py-4 px-4 gap-3 no-scrollbar">
+            {/* Sticky Category Header - Instagram Style */}
+            <div className={`sticky ${!isStoreOpen ? 'top-[76px]' : 'top-0'} z-30 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100 transition-all`}>
+                <div className="flex overflow-x-auto py-3 px-4 gap-2 no-scrollbar items-center">
                     {staticCategories.map((category) => (
                         <button
                             key={category.id}
                             onClick={() => setActiveCategory(category.id)}
-                            className={`whitespace-nowrap px-5 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === category.id
-                                ? 'bg-orange-500 text-white shadow-md'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
+                            className={`
+                                whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 border
+                                ${activeCategory === category.id
+                                    ? 'bg-orange-600 border-orange-600 text-white shadow-md transform scale-105'
+                                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-white hover:border-gray-300'
+                                }
+                            `}
                         >
                             {category.name}
                         </button>
