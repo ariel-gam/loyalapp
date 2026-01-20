@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { categories as staticCategories } from '@/data/products';
 import ProductCard from './ProductCard';
 import { Product } from '@/data/products';
