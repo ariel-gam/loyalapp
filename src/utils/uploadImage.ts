@@ -1,7 +1,7 @@
-import imageCompression from 'browser-image-compression';
 import { supabase } from '@/lib/supabase';
 
 export async function compressImage(file: File) {
+    const imageCompression = (await import('browser-image-compression')).default;
     const options = {
         maxSizeMB: 1, // Max size in MB
         maxWidthOrHeight: 1280, // Max dimension
