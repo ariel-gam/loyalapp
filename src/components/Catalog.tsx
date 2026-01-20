@@ -233,17 +233,4 @@ export default function Catalog({ slug, initialProducts = [], store }: CatalogPr
         </div>
     );
 }
-key = { product.id }
-product = { product }
-disabled = {!isStoreOpen}
-                />
-            ))
-        ) : (
-    <div className="col-span-full py-10 text-center text-gray-400">
-        No hay productos disponibles en esta sección por ahora.
-    </div>
-)}
-    </div >
-        </div >
-    );
-}
+
