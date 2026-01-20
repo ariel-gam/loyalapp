@@ -16,6 +16,7 @@ export default function Catalog({ slug, initialProducts = [], store }: CatalogPr
     const [products, setProducts] = useState<Product[]>(initialProducts);
     const [loading, setLoading] = useState(!initialProducts.length);
     const [isStoreOpen, setIsStoreOpen] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         if (store?.schedule) {
@@ -161,10 +162,14 @@ export default function Catalog({ slug, initialProducts = [], store }: CatalogPr
         };
     }, [slug]);
 
-    // Also filter out unavailable products
-    const filteredProducts = products.filter(
-        (product) => product.categoryId === activeCategory && product.available !== false
-    );
+    // Filter by category, search query, and availability
+    const filteredProducts = products.filter((product) => {
+        const matchesCategory = product.categoryId === activeCategory;
+        const matchesSearch = !searchQuery ||
+            product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (product.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false);
+        return matchesCategory && matchesSearch && product.available !== false;
+    });
 
     return (
         <div className="pb-24">
