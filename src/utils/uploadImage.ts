@@ -49,8 +49,12 @@ export async function uploadProductImage(file: File) {
 
 export async function uploadTransferProof(file: File) {
     try {
-        // 1. Compress (optional for proofs, but good for speed)
-        const compressedFile = await compressImage(file);
+        let fileToUpload = file;
+
+        // Only compress if it's an image (not PDF)
+        if (file.type.startsWith('image/')) {
+            fileToUpload = await compressImage(file);
+        }
 
         // 2. Generate path
         const fileExt = file.name.split('.').pop();
@@ -60,7 +64,7 @@ export async function uploadTransferProof(file: File) {
         // 3. Upload
         const { error: uploadError } = await supabase.storage
             .from('products') // Reusing products bucket to avoid migration complexity
-            .upload(filePath, compressedFile);
+            .upload(filePath, fileToUpload);
 
         if (uploadError) {
             throw uploadError;
