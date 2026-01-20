@@ -81,7 +81,9 @@ export default function CartModal({ store }: CartModalProps) {
         // ... (rest of message construction)
         message += `%0A*Detalle del Pedido:*%0A`;
         items.forEach((item) => {
-            message += `- ${item.quantity}x ${item.product.name} ($${(item.product.price * item.quantity).toLocaleString('es-AR')})%0A`;
+            if (item.product) {
+                message += `- ${item.quantity}x ${item.product.name || 'Producto'} ($${((item.product.price || 0) * item.quantity).toLocaleString('es-AR')})%0A`;
+            }
         });
         message += `%0A*TOTAL: $${finalTotal.toLocaleString('es-AR')}*`;
         if (deliveryMethod === 'pickup') {

@@ -62,11 +62,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const toggleCart = () => setIsCartOpen((prev) => !prev);
 
     const totalPrice = useMemo(() => {
-        return items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+        return items.reduce((sum, item) => {
+            if (!item.product) return sum;
+            return sum + (item.product.price || 0) * item.quantity;
+        }, 0);
     }, [items]);
 
     const totalItems = useMemo(() => {
-        return items.reduce((sum, item) => sum + item.quantity, 0);
+        return items.reduce((sum, item) => {
+            if (!item.product) return sum;
+            return sum + item.quantity;
+        }, 0);
     }, [items]);
 
     return (
