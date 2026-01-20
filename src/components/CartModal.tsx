@@ -47,7 +47,9 @@ export default function CartModal({ store }: CartModalProps) {
 
     // Store Constants
     const storeAddress = store.address || store.settings?.address || 'Dirección no disponible';
-    const storePhone = store.phone || store.settings?.phone || '5491112345678';
+    const rawStorePhone = store.phone || store.settings?.phone || '5491112345678';
+    // Sanitize phone: remove all non-digit characters (spaces, dashes, parentheses, +, etc)
+    const storePhone = rawStorePhone.replace(/\D/g, '');
 
     // Calculate final total including delivery
     const deliveryCost = (deliveryMethod === 'delivery' && selectedZone) ? selectedZone.price : 0;
