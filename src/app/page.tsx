@@ -155,7 +155,7 @@ export default function LandingPage() {
               {
                 icon: "📱",
                 title: "1. Tu Cliente Elige",
-                desc: "Entra a tu link o scanea el QR. Ve tu menú con fotos y elige qué comer."
+                desc: "Entra a tu link. Ve tu menú con fotos y elige qué comer."
               },
               {
                 icon: "🛒",
