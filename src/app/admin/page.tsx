@@ -1625,6 +1625,50 @@ export default function AdminPage() {
                                     <label className="block text-sm font-medium text-gray-700">Descripción (Opcional)</label>
                                     <textarea name="description" defaultValue={editingProduct?.description} className="w-full border p-2 rounded focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Ingredientes, detalles..." />
                                 </div>
+
+                                {/* Discount Section */}
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="text-lg">🔥</span>
+                                        <label className="block text-sm font-bold text-red-700">Promoción / Descuento</label>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">Día de la semana</label>
+                                            <select
+                                                name="discount_day"
+                                                defaultValue={editingProduct?.discounts?.[0]?.day_of_week ?? ''}
+                                                className="w-full border p-2 rounded focus:ring-2 focus:ring-red-500 outline-none bg-white text-sm"
+                                            >
+                                                <option value="">Sin descuento</option>
+                                                <option value="0">Domingo</option>
+                                                <option value="1">Lunes</option>
+                                                <option value="2">Martes</option>
+                                                <option value="3">Miércoles</option>
+                                                <option value="4">Jueves</option>
+                                                <option value="5">Viernes</option>
+                                                <option value="6">Sábado</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">Porcentaje OFF</label>
+                                            <div className="relative">
+                                                <input
+                                                    name="discount_percent"
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    defaultValue={editingProduct?.discounts?.[0]?.percent ?? ''}
+                                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-red-500 outline-none pr-8 text-sm"
+                                                    placeholder="10"
+                                                />
+                                                <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-red-600 mt-2">Ej: "Lunes 10%" = 10% OFF todos los Lunes</p>
+                                </div>
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Imagen</label>
                                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition relative">

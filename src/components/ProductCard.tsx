@@ -26,11 +26,21 @@ export default function ProductCard({ product, disabled }: ProductCardProps) {
         }
     };
 
+    const hasDiscount = product.isDiscountActive && product.discountPercent && product.originalPrice;
+
     return (
         <div className={`
-            bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full
+            bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col h-full relative
+            ${hasDiscount ? 'border-orange-300 ring-2 ring-orange-200' : 'border-gray-100'}
             ${disabled ? 'opacity-60 grayscale' : ''}
         `}>
+            {/* Discount Badge */}
+            {hasDiscount && (
+                <div className="absolute top-2 left-2 z-10 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
+                    🔥 {product.discountPercent}% OFF
+                </div>
+            )}
+
             {/* Image Container */}
             <div className="relative aspect-[4/3] w-full bg-gray-100">
                 <Image
@@ -48,9 +58,16 @@ export default function ProductCard({ product, disabled }: ProductCardProps) {
                 <p className="text-sm text-gray-500 line-clamp-2 mb-3 flex-1">{product.description}</p>
 
                 <div className="flex items-center justify-between mt-auto">
-                    <span className="font-bold text-lg text-gray-900">
-                        ${product.price.toLocaleString('es-AR')}
-                    </span>
+                    <div className="flex flex-col">
+                        {hasDiscount && (
+                            <span className="text-xs text-gray-400 line-through">
+                                ${product.originalPrice?.toLocaleString('es-AR')}
+                            </span>
+                        )}
+                        <span className={`font-bold text-lg ${hasDiscount ? 'text-red-600' : 'text-gray-900'}`}>
+                            ${product.price.toLocaleString('es-AR')}
+                        </span>
+                    </div>
 
                     <button
                         onClick={handleAdd}
@@ -59,7 +76,9 @@ export default function ProductCard({ product, disabled }: ProductCardProps) {
                             px-4 py-2 rounded-lg text-sm font-bold transition-all
                             ${disabled || !product.available
                                 ? 'bg-gray-100 text-gray-400'
-                                : 'bg-orange-600 text-white hover:bg-orange-700 active:scale-95'
+                                : hasDiscount
+                                    ? 'bg-red-500 text-white hover:bg-red-600 active:scale-95'
+                                    : 'bg-orange-600 text-white hover:bg-orange-700 active:scale-95'
                             }
                         `}
                     >
@@ -70,3 +89,4 @@ export default function ProductCard({ product, disabled }: ProductCardProps) {
         </div>
     );
 }
+

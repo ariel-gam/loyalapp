@@ -98,29 +98,31 @@ export async function getAdminProducts() {
 }
 
 async function manageDiscounts(supabase: any, storeId: string, productId: string, formData: FormData) {
-    // Days: 0 (Sun) - 6 (Sat)
-    for (let i = 0; i <= 6; i++) {
-        const percentStr = formData.get(`discount_${i}`);
-        const percent = percentStr ? Number(percentStr) : 0;
+    // Get the discount settings from form
+    const discountDayStr = formData.get('discount_day') as string;
+    const discountPercentStr = formData.get('discount_percent') as string;
 
-        if (percent > 0) {
-            // Upsert discount
+    // First, clear all existing discounts for this product
+    await supabase
+        .from('discounts')
+        .delete()
+        .eq('product_id', productId);
+
+    // If we have a valid day and percent, create the discount
+    if (discountDayStr !== '' && discountDayStr !== null && discountPercentStr) {
+        const day = Number(discountDayStr);
+        const percent = Number(discountPercentStr);
+
+        if (!isNaN(day) && percent > 0) {
             await supabase
                 .from('discounts')
-                .upsert({
+                .insert({
                     store_id: storeId,
                     product_id: productId,
-                    day_of_week: i,
+                    day_of_week: day,
                     percent: percent,
                     is_active: true
-                }, { onConflict: 'product_id, day_of_week' });
-        } else {
-            // Remove discount
-            await supabase
-                .from('discounts')
-                .delete()
-                .eq('product_id', productId)
-                .eq('day_of_week', i);
+                });
         }
     }
 }

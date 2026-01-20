@@ -9,6 +9,7 @@ export interface Product {
   discountDay?: number; // 0 (Sunday) - 6 (Saturday)
   discountPercent?: number; // 0-100
   originalPrice?: number; // Optional, set if there is a discount
+  isDiscountActive?: boolean; // True if a discount applies today
 }
 
 export interface Category {
