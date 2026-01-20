@@ -132,8 +132,8 @@ export default function CartModal({ store }: CartModalProps) {
             if (paymentMethod === 'transfer' && transferFile) {
                 setIsUploading(true);
                 try {
-                    proofUrl = await uploadTransferProof(transferFile);
-                    console.log('Proof uploaded:', proofUrl);
+                    // proofUrl = await uploadTransferProof(transferFile); 
+                    console.log('Proof upload DISABLED for debug');
                 } catch (error) {
                     console.error('Error uploading proof:', error);
                     alert('Error al subir el comprobante. Por favor intenta de nuevo.');
@@ -215,7 +215,7 @@ export default function CartModal({ store }: CartModalProps) {
                             <h3 className="font-bold text-orange-800 mb-2 text-sm">¿Te gustó la experiencia?</h3>
                             {/* Dynamic Import to avoid hydration issues if needed, strictly InstallAppButton is client side */}
                             <div className="mt-2">
-                                <InstallAppButton />
+                                {/* <InstallAppButton />  -- Temporarily Disabled for Debugging */}
                             </div>
                         </div>
 
@@ -308,11 +308,12 @@ export default function CartModal({ store }: CartModalProps) {
                                             <div key={item.product.id} className="flex gap-4">
                                                 <div className="relative h-16 w-16 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100 bg-gray-50 flex items-center justify-center">
                                                     {item.product.image ? (
-                                                        <Image
+                                                        /* Replacing Next Image with standard img for debugging */
+                                                        /* eslint-disable-next-line @next/next/no-img-element */
+                                                        <img
                                                             src={item.product.image}
                                                             alt={item.product.name}
-                                                            fill
-                                                            className="object-cover"
+                                                            className="w-full h-full object-cover"
                                                         />
                                                     ) : (
                                                         <span className="text-2xl">🍔</span>
