@@ -1080,8 +1080,16 @@ export default function AdminPage() {
                             };
 
                             const res = await updateStoreSettings(newSettings);
-                            if (res.success) alert('Guardado!');
-                            else alert(res.message);
+                            if (res.success) {
+                                alert('Guardado!');
+                                // Reload store info to show updated values
+                                const updatedInfo = await getStoreSettings();
+                                if (updatedInfo) {
+                                    setStoreInfo(updatedInfo);
+                                }
+                            } else {
+                                alert(res.message);
+                            }
                         }} className="space-y-4">
                             <div><label className="text-sm font-bold">Nombre</label><input name="store_name" defaultValue={storeInfo.store_name} className="w-full border p-2 rounded" /></div>
                             <div><label className="text-sm font-bold">Dirección</label><input name="address" defaultValue={storeInfo.address} className="w-full border p-2 rounded" /></div>
