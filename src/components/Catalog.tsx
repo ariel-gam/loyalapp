@@ -162,13 +162,18 @@ export default function Catalog({ slug, initialProducts = [], store }: CatalogPr
         };
     }, [slug]);
 
-    // Filter by category, search query, and availability
+    // Filter by search query (global) or category (when no search)
     const filteredProducts = products.filter((product) => {
-        const matchesCategory = product.categoryId === activeCategory;
-        const matchesSearch = !searchQuery ||
-            product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (product.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false);
-        return matchesCategory && matchesSearch && product.available !== false;
+        if (searchQuery) {
+            // When searching, ignore category and search ALL products
+            const matchesSearch =
+                product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (product.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false);
+            return matchesSearch && product.available !== false;
+        } else {
+            // When NOT searching, filter by active category
+            return product.categoryId === activeCategory && product.available !== false;
+        }
     });
 
     return (
