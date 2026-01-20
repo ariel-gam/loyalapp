@@ -101,9 +101,8 @@ export default function CartModal({ store }: CartModalProps) {
         // Check if already showing success (prevent double submit if button double-clicked before state update)
         if (showSuccess) return;
 
-        // DEBUG: Trace execution
-        console.log("Starting checkout...");
-        // alert("Debug: Iniciando proceso de pedido..."); // Uncomment if console is inaccessible
+        // Check if already showing success (prevent double submit if button double-clicked before state update)
+        if (showSuccess) return;
 
         // Validation
         if (!name || !phone) {
@@ -136,8 +135,7 @@ export default function CartModal({ store }: CartModalProps) {
             if (paymentMethod === 'transfer' && transferFile) {
                 setIsUploading(true);
                 try {
-                    // proofUrl = await uploadTransferProof(transferFile); 
-                    console.log('Proof upload DISABLED for debug');
+                    proofUrl = await uploadTransferProof(transferFile);
                 } catch (error) {
                     console.error('Error uploading proof:', error);
                     alert('Error al subir el comprobante. Por favor intenta de nuevo.');
@@ -148,7 +146,6 @@ export default function CartModal({ store }: CartModalProps) {
             }
 
             console.log('Submitting order with address:', finalAddress);
-            // alert("Debug: Enviando orden al servidor...");
 
             await submitOrder({
                 storeId: store.id,
@@ -160,8 +157,6 @@ export default function CartModal({ store }: CartModalProps) {
                 deliveryZone: selectedZone ? { name: selectedZone.name, price: selectedZone.price } : undefined,
                 totalPrice: finalTotal
             });
-
-            // alert("Debug: Orden guardada exitosamente. Abriendo WhatsApp...");
 
             // Construct message with proof link
             let message = constructMessage();
@@ -180,7 +175,7 @@ export default function CartModal({ store }: CartModalProps) {
 
         } catch (err) {
             console.error("Error saving order:", err);
-            alert(`Hubo un error al procesar el pedido: ${err instanceof Error ? err.message : String(err)}`);
+            alert('Hubo un error al procesar el pedido. Por favor intenta de nuevo.');
         } finally {
             setIsSubmitting(false);
         }
@@ -222,7 +217,7 @@ export default function CartModal({ store }: CartModalProps) {
                             <h3 className="font-bold text-orange-800 mb-2 text-sm">¿Te gustó la experiencia?</h3>
                             {/* Dynamic Import to avoid hydration issues if needed, strictly InstallAppButton is client side */}
                             <div className="mt-2">
-                                {/* <InstallAppButton />  -- Temporarily Disabled for Debugging */}
+                                <InstallAppButton />
                             </div>
                         </div>
 
@@ -315,12 +310,12 @@ export default function CartModal({ store }: CartModalProps) {
                                             <div key={item.product.id} className="flex gap-4">
                                                 <div className="relative h-16 w-16 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100 bg-gray-50 flex items-center justify-center">
                                                     {item.product.image ? (
-                                                        /* Replacing Next Image with standard img for debugging */
-                                                        /* eslint-disable-next-line @next/next/no-img-element */
-                                                        <img
+                                                        <Image
                                                             src={item.product.image}
                                                             alt={item.product.name}
-                                                            className="w-full h-full object-cover"
+                                                            fill
+                                                            className="object-cover"
+                                                            sizes="64px"
                                                         />
                                                     ) : (
                                                         <span className="text-2xl">🍔</span>
@@ -502,9 +497,9 @@ export default function CartModal({ store }: CartModalProps) {
                                 <button
                                     onClick={handleCheckout}
                                     disabled={items.length === 0 || isSubmitting}
-                                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-purple-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-green-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70"
                                 >
-                                    <span>{isSubmitting ? 'Procesando...' : 'PRUEBA DE DEBUG (Purple)'}</span>
+                                    <span>{isSubmitting ? 'Procesando...' : 'Confirmar Pedido en WhatsApp'}</span>
                                 </button>
                             </div>
                         )}
