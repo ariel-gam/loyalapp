@@ -101,6 +101,10 @@ export default function CartModal({ store }: CartModalProps) {
         // Check if already showing success (prevent double submit if button double-clicked before state update)
         if (showSuccess) return;
 
+        // DEBUG: Trace execution
+        console.log("Starting checkout...");
+        // alert("Debug: Iniciando proceso de pedido..."); // Uncomment if console is inaccessible
+
         // Validation
         if (!name || !phone) {
             alert('Por favor completa tu nombre y teléfono');
@@ -144,6 +148,7 @@ export default function CartModal({ store }: CartModalProps) {
             }
 
             console.log('Submitting order with address:', finalAddress);
+            // alert("Debug: Enviando orden al servidor...");
 
             await submitOrder({
                 storeId: store.id,
@@ -155,6 +160,8 @@ export default function CartModal({ store }: CartModalProps) {
                 deliveryZone: selectedZone ? { name: selectedZone.name, price: selectedZone.price } : undefined,
                 totalPrice: finalTotal
             });
+
+            // alert("Debug: Orden guardada exitosamente. Abriendo WhatsApp...");
 
             // Construct message with proof link
             let message = constructMessage();
@@ -173,7 +180,7 @@ export default function CartModal({ store }: CartModalProps) {
 
         } catch (err) {
             console.error("Error saving order:", err);
-            alert('Hubo un error al procesar el pedido.');
+            alert(`Hubo un error al procesar el pedido: ${err instanceof Error ? err.message : String(err)}`);
         } finally {
             setIsSubmitting(false);
         }
