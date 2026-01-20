@@ -170,63 +170,45 @@ export default function Catalog({ slug, initialProducts = [], store }: CatalogPr
         <div className="pb-24">
             {/* Store Closed Banner */}
             {!isStoreOpen ? (
-                <div className="bg-red-600 text-white p-4 text-center sticky top-0 z-50 shadow-md">
-                    <h3 className="font-bold text-lg">🔴 Local Cerrado</h3>
-                    <p className="text-sm opacity-90">
-                        {getNextOpenMessage()}
-                    </p>
-                </div>
-            ) : ((store?.delayTime > 20 || store?.settings?.delayTime > 20) && (
-                <div className="bg-orange-500 text-white p-2 text-center sticky top-0 z-50 shadow-md flex items-center justify-center gap-2 animate-fade-in">
-                    <span className="text-lg">⏳</span>
-                    <div>
-                        <p className="text-sm font-bold">Alta Demanda</p>
-                        <p className="text-xs opacity-90">Demora aprox: {(store?.delayTime || store?.settings?.delayTime || 0) + 20} - {(store?.delayTime || store?.settings?.delayTime || 0) + 40} min</p>
-                    </div>
-                </div>
+                {/* Simple Category Filter */ }
+                < div className="overflow-x-auto py-4 px-4 whitespace-nowrap bg-gray-50 border-b border-gray-100">
+            {staticCategories.map((category) => (
+                <button
+                    key={category.id}
+                    onClick={() => setActiveCategory(category.id)}
+                    className={`
+                            inline-block px-4 py-2 mr-2 rounded-full text-sm font-medium transition-colors
+                            ${activeCategory === category.id
+                            ? 'bg-orange-600 text-white'
+                            : 'bg-white text-gray-600 border border-gray-200'
+                        }
+                        `}
+                >
+                    {category.name}
+                </button>
             ))}
-
-            {/* Sticky Category Header - Instagram Style */}
-            <div className={`sticky ${!isStoreOpen ? 'top-[76px]' : 'top-0'} z-30 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100 transition-all`}>
-                <div className="flex overflow-x-auto py-3 px-4 gap-2 no-scrollbar items-center">
-                    {staticCategories.map((category) => (
-                        <button
-                            key={category.id}
-                            onClick={() => setActiveCategory(category.id)}
-                            className={`
-                                whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 border
-                                ${activeCategory === category.id
-                                    ? 'bg-orange-600 border-orange-600 text-white shadow-md transform scale-105'
-                                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-white hover:border-gray-300'
-                                }
-                            `}
-                        >
-                            {category.name}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Product Grid */}
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {loading ? (
-                    <div className="col-span-full py-20 text-center text-gray-500">
-                        Cargando menú...
-                    </div>
-                ) : filteredProducts.length > 0 ? (
-                    filteredProducts.map((product) => (
-                        <ProductCard
-                            key={product.id}
-                            product={product}
-                            disabled={!isStoreOpen}
-                        />
-                    ))
-                ) : (
-                    <div className="col-span-full py-10 text-center text-gray-400">
-                        No hay productos disponibles en esta sección por ahora.
-                    </div>
-                )}
-            </div>
         </div>
+
+            {/* Product Grid */ }
+    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {loading ? (
+            <div className="col-span-full py-20 text-center text-gray-500">
+                Cargando menú...
+            </div>
+        ) : filteredProducts.length > 0 ? (
+            filteredProducts.map((product) => (
+                <ProductCard
+                    key={product.id}
+                    product={product}
+                    disabled={!isStoreOpen}
+                />
+            ))
+        ) : (
+            <div className="col-span-full py-10 text-center text-gray-400">
+                No hay productos disponibles en esta sección por ahora.
+            </div>
+        )}
+    </div>
+        </div >
     );
 }
