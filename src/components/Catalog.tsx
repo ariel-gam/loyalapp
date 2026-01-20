@@ -194,48 +194,66 @@ export default function Catalog({ slug, initialProducts = [], store }: CatalogPr
                         </p>
                     </div>
                 </div>
-            )}
+                </div>
+    )
+}
 
-            {/* Simple Category Filter */}
-            <div className="overflow-x-auto py-4 px-4 whitespace-nowrap bg-gray-50 border-b border-gray-100">
-                {staticCategories.map((category) => (
-                    <button
-                        key={category.id}
-                        onClick={() => setActiveCategory(category.id)}
-                        className={`
+{/* Search Bar */ }
+<div className="p-4 bg-gradient-to-r from-purple-100/50 to-pink-100/50">
+    <div className="relative max-w-2xl mx-auto">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">
+            🔍
+        </div>
+        <input
+            type="text"
+            placeholder="¿Qué buscas?"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 rounded-full border border-gray-200 bg-white/90 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:bg-white transition"
+        />
+    </div>
+</div>
+
+{/* Simple Category Filter */ }
+<div className="overflow-x-auto py-4 px-4 whitespace-nowrap bg-gray-50 border-b border-gray-100">
+    {staticCategories.map((category) => (
+        <button
+            key={category.id}
+            onClick={() => setActiveCategory(category.id)}
+            className={`
                             inline-block px-4 py-2 mr-2 rounded-full text-sm font-medium transition-colors border
                             ${activeCategory === category.id
-                                ? 'bg-orange-600 text-white border-orange-600'
-                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                            }
+                    ? 'bg-orange-600 text-white border-orange-600'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }
                         `}
-                    >
-                        {category.name}
-                    </button>
-                ))}
-            </div>
+        >
+            {category.name}
+        </button>
+    ))}
+</div>
 
-            {/* Product Grid */}
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {loading ? (
-                    <div className="col-span-full py-20 text-center text-gray-500">
-                        Cargando menú...
-                    </div>
-                ) : filteredProducts.length > 0 ? (
-                    filteredProducts.map((product) => (
-                        <ProductCard
-                            key={product.id}
-                            product={product}
-                            disabled={!isStoreOpen}
-                        />
-                    ))
-                ) : (
-                    <div className="col-span-full py-10 text-center text-gray-400">
-                        No hay productos disponibles en esta sección por ahora.
-                    </div>
-                )}
-            </div>
+{/* Product Grid */ }
+<div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {loading ? (
+        <div className="col-span-full py-20 text-center text-gray-500">
+            Cargando menú...
         </div>
+    ) : filteredProducts.length > 0 ? (
+        filteredProducts.map((product) => (
+            <ProductCard
+                key={product.id}
+                product={product}
+                disabled={!isStoreOpen}
+            />
+        ))
+    ) : (
+        <div className="col-span-full py-10 text-center text-gray-400">
+            No hay productos disponibles en esta sección por ahora.
+        </div>
+    )}
+</div>
+        </div >
     );
 }
 
